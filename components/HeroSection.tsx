@@ -117,9 +117,10 @@ export default function HeroSection() {
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 <span>Same-day diagnostics</span>
               </div>
-              <div className="hidden h-1 w-1 rounded-full bg-foreground/20 sm:block" />
+
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
               <span>No fix, no fee</span>
-              <div className="hidden h-1 w-1 rounded-full bg-foreground/20 sm:block" />
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
               <span>Warranty on repairs</span>
             </motion.div>
           </motion.div>

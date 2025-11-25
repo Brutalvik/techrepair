@@ -8,6 +8,7 @@ import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
 import { Navbar } from "@/components/navbar";
 import FooterSection from "@/components/FooterSection";
+import { Chatbot } from "@/components/ChatBot";
 
 export const metadata: Metadata = {
   title: {
@@ -50,6 +51,7 @@ export default function RootLayout({
             <main className="w-full flex-grow">{children}</main>
 
             <FooterSection />
+            <Chatbot />
           </div>
         </Providers>
       </body>

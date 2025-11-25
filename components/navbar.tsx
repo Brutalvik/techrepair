@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Navbar as HeroUINavbar,
   NavbarContent,
@@ -17,6 +19,22 @@ import { Logo } from "@/components/icons";
 import { Tooltip } from "@heroui/tooltip";
 
 export const Navbar = () => {
+  // 1. Function to handle smooth scrolling
+  const handleScroll = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    href: string
+  ) => {
+    // Check if the link is meant to scroll (starts with #)
+    if (href.startsWith("#")) {
+      e.preventDefault();
+      // Find the element by ID (removing the #)
+      const element = document.getElementById(href.substring(1));
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+      }
+    }
+  };
+
   return (
     <HeroUINavbar maxWidth="xl" position="sticky">
       {/* LEFT: logo */}
@@ -34,19 +52,27 @@ export const Navbar = () => {
       {/* CENTER: desktop nav items */}
       <NavbarContent className="hidden lg:flex flex-1 justify-center">
         <ul className="flex items-center gap-6">
-          {siteConfig.navItems.map((item) => (
-            <NavbarItem key={item.href}>
-              <NextLink
-                href={item.href}
-                className={clsx(
-                  linkStyles({ color: "foreground" }),
-                  "cursor-pointer transition-colors duration-150 hover:text-blue-500 hover:font-semibold"
-                )}
-              >
-                {item.label}
-              </NextLink>
-            </NavbarItem>
-          ))}
+          {siteConfig.navItems.map((item) => {
+            // 2. Determine if this item is the "Services" link
+            const isServices = item.label === "Services";
+            // If it is Services, point to the ID. Otherwise use the config href.
+            const linkHref = isServices ? "#services" : item.href;
+
+            return (
+              <NavbarItem key={item.href}>
+                <NextLink
+                  href={linkHref}
+                  onClick={(e) => handleScroll(e, linkHref)} // Attach click handler
+                  className={clsx(
+                    linkStyles({ color: "foreground" }),
+                    "cursor-pointer transition-colors duration-150 hover:text-blue-500 hover:font-semibold"
+                  )}
+                >
+                  {item.label}
+                </NextLink>
+              </NavbarItem>
+            );
+          })}
         </ul>
       </NavbarContent>
 
@@ -105,8 +131,27 @@ export const Navbar = () => {
         <NavbarMenuToggle />
       </NavbarContent>
 
-      {/* MOBILE MENU stays the same */}
-      <NavbarMenu>{/* ... */}</NavbarMenu>
+      {/* MOBILE MENU */}
+      <NavbarMenu>
+        <div className="mx-4 mt-2 flex flex-col gap-2">
+          {siteConfig.navItems.map((item, index) => {
+            const isServices = item.label === "Services";
+            const linkHref = isServices ? "#services" : item.href;
+
+            return (
+              <NavbarMenuItem key={`${item}-${index}`}>
+                <NextLink
+                  href={linkHref}
+                  onClick={(e) => handleScroll(e, linkHref)} // Attach click handler
+                  className="w-full text-lg"
+                >
+                  {item.label}
+                </NextLink>
+              </NavbarMenuItem>
+            );
+          })}
+        </div>
+      </NavbarMenu>
     </HeroUINavbar>
   );
 };

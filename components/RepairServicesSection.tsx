@@ -39,7 +39,11 @@ const reasons = [
 
 export function RepairServicesSection() {
   return (
-    <section className="w-full bg-slate-50 py-20 dark:bg-zinc-900/50">
+    // ADDED id="services" here to allow the Navbar to scroll to this section
+    <section
+      id="services"
+      className="w-full bg-slate-50 py-20 dark:bg-zinc-900/50"
+    >
       <motion.div
         variants={sectionVariants}
         initial="hidden"
