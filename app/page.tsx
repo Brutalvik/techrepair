@@ -1,3 +1,5 @@
+import { Button } from "@heroui/button";
+
 export default function Home() {
   return (
     <section className="relative min-h-screen bg-background">
@@ -33,19 +35,12 @@ export default function Home() {
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <button
-                type="button"
-                className="rounded-full bg-primary px-7 py-3 text-sm font-medium shadow-md transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
+              <Button variant="solid" color="primary">
                 Book a Repair
-              </button>
-
-              <button
-                type="button"
-                className="rounded-full border border-border bg-transparent px-7 py-3 text-sm font-medium transition hover:bg-accent/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-              >
-                Check Repair Status
-              </button>
+              </Button>
+              <Button variant="ghost" color="primary">
+                Book a Repair
+              </Button>
             </div>
 
             <div className="flex items-center gap-3 text-xs md:text-sm opacity-75">
