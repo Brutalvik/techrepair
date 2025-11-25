@@ -1,6 +1,5 @@
 import "@/styles/globals.css";
 import { Metadata, Viewport } from "next";
-import { Link } from "@heroui/link";
 import clsx from "clsx";
 
 import { Providers } from "./providers";
@@ -8,6 +7,7 @@ import { Providers } from "./providers";
 import { siteConfig } from "@/config/site";
 import { fontSans } from "@/config/fonts";
 import { Navbar } from "@/components/navbar";
+import FooterSection from "@/components/FooterSection";
 
 export const metadata: Metadata = {
   title: {
@@ -44,18 +44,12 @@ export default function RootLayout({
         <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
           <div className="relative flex flex-col h-screen">
             <Navbar />
-            <main className="container mx-auto px-6 flex-grow">{children}</main>
-            <footer className="w-full flex items-center justify-center py-3">
-              <Link
-                isExternal
-                className="flex items-center gap-1 text-current"
-                href="https://infinitetechrepair.com/"
-                title="Infinite Tech Repair"
-              >
-                <span className="text-default-600">Copyright 2025</span>
-                <p className="text-primary">Infinite Tech Repairs</p>
-              </Link>
-            </footer>
+            {/* UPDATED: Removed "container mx-auto px-6" 
+               Added "w-full" so children can be full width 
+            */}
+            <main className="w-full flex-grow">{children}</main>
+
+            <FooterSection />
           </div>
         </Providers>
       </body>
