@@ -2,6 +2,7 @@
 
 import { Button } from "@heroui/button";
 import { motion } from "framer-motion";
+import Link from "next/link"; // Import Link
 
 const sectionVariants = {
   hidden: { opacity: 0 },
@@ -55,13 +56,12 @@ const rightColVariants = {
 export default function HeroSection() {
   return (
     <motion.section
-      // UPDATED: Added flex, flex-col, and justify-center to force vertical centering of the whole section
       className="relative min-h-screen flex flex-col justify-center bg-background overflow-hidden"
       variants={sectionVariants}
       initial="hidden"
       animate="visible"
     >
-      {/* Faded image background - Hidden on mobile to keep text legible and centered */}
+      {/* Faded image background - Hidden on mobile */}
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden hidden md:block">
         <div className="absolute inset-y-0 right-0 w-full bg-[url('/images/hero-tech-placeholder.png')] bg-right bg-no-repeat bg-contain opacity-60" />
         <div className="absolute inset-y-0 left-0 right-1/4 bg-gradient-to-r from-background via-background/80 to-transparent" />
@@ -101,9 +101,17 @@ export default function HeroSection() {
               className="flex flex-wrap gap-4"
               variants={textItemVariants}
             >
-              <Button variant="solid" color="primary" size="lg">
+              {/* UPDATED: Added as={Link} and href="/book" */}
+              <Button
+                as={Link}
+                href="/book-repair"
+                variant="solid"
+                color="primary"
+                size="lg"
+              >
                 Book a Repair
               </Button>
+
               <Button variant="ghost" color="primary" size="lg">
                 Check Repair Status
               </Button>
@@ -126,7 +134,6 @@ export default function HeroSection() {
           </motion.div>
 
           {/* Right side: visual alignment area */}
-          {/* UPDATED: Added 'hidden lg:flex' so this completely disappears on mobile */}
           <motion.div
             className="hidden lg:flex flex-1 items-center justify-center"
             variants={rightColVariants}
