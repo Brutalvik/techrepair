@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { motion } from "framer-motion";
@@ -75,6 +75,25 @@ export default function BookRepairPage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  // Calculate default values
+  const { defaultDate, defaultTime } = useMemo(() => {
+    const now = new Date();
+
+    // Default Date: Today (Local YYYY-MM-DD)
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    const dateStr = `${year}-${month}-${day}`;
+
+    // Default Time: Now + 2 hours (HH:mm)
+    now.setHours(now.getHours() + 2);
+    const hours = String(now.getHours()).padStart(2, "0");
+    const minutes = String(now.getMinutes()).padStart(2, "0");
+    const timeStr = `${hours}:${minutes}`;
+
+    return { defaultDate: dateStr, defaultTime: timeStr };
+  }, []);
+
   const formik = useFormik({
     initialValues: {
       customerName: "",
@@ -83,8 +102,8 @@ export default function BookRepairPage() {
       deviceType: "",
       location: "",
       issueDescription: "",
-      date: "",
-      time: "09:00",
+      date: defaultDate, // Default: Today
+      time: defaultTime, // Default: Now + 2h
       images: [] as string[], // Base64 strings
     },
     validationSchema: BookingSchema,
@@ -119,7 +138,13 @@ export default function BookRepairPage() {
         }
 
         setSubmitSuccess(true);
-        formik.resetForm();
+        formik.resetForm({
+          values: {
+            ...formik.initialValues,
+            date: defaultDate,
+            time: defaultTime,
+          },
+        });
       } catch (err: any) {
         setSubmitError(err.message);
       } finally {
@@ -219,6 +244,7 @@ export default function BookRepairPage() {
                 isInvalid={
                   formik.touched.customerName && !!formik.errors.customerName
                 }
+                isRequired
               />
               <Input
                 label="Email"
@@ -227,6 +253,7 @@ export default function BookRepairPage() {
                 {...formik.getFieldProps("email")}
                 errorMessage={formik.touched.email && formik.errors.email}
                 isInvalid={formik.touched.email && !!formik.errors.email}
+                isRequired
               />
               <Input
                 label="Phone Number"
@@ -235,6 +262,7 @@ export default function BookRepairPage() {
                 {...formik.getFieldProps("phone")}
                 errorMessage={formik.touched.phone && formik.errors.phone}
                 isInvalid={formik.touched.phone && !!formik.errors.phone}
+                isRequired
               />
             </div>
 
@@ -246,7 +274,7 @@ export default function BookRepairPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="mb-2 block text-small font-medium text-foreground-500">
+                <label className="mb-2 block text-small font-medium text-foreground-500 after:content-['*'] after:ml-0.5 after:text-red-500">
                   Device Type
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -288,6 +316,7 @@ export default function BookRepairPage() {
                   formik.touched.issueDescription &&
                   !!formik.errors.issueDescription
                 }
+                isRequired
               />
 
               {/* Image Upload */}
@@ -353,7 +382,7 @@ export default function BookRepairPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="mb-2 block text-small font-medium text-foreground-500">
+                <label className="mb-2 block text-small font-medium text-foreground-500 after:content-['*'] after:ml-0.5 after:text-red-500">
                   Select Location
                 </label>
                 <div className="grid gap-3">
@@ -396,12 +425,12 @@ export default function BookRepairPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-2 block text-small font-medium text-foreground-500 flex items-center gap-1">
+                  <label className="mb-2 block text-small font-medium text-foreground-500 flex items-center gap-1 after:content-['*'] after:ml-0.5 after:text-red-500">
                     <Calendar size={14} /> Date
                   </label>
                   <input
                     type="date"
-                    min={new Date().toISOString().split("T")[0]}
+                    min={defaultDate}
                     {...formik.getFieldProps("date")}
                     className="w-full rounded-xl border-slate-200 bg-slate-50 p-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
@@ -412,7 +441,7 @@ export default function BookRepairPage() {
                   )}
                 </div>
                 <div>
-                  <label className="mb-2 block text-small font-medium text-foreground-500 flex items-center gap-1">
+                  <label className="mb-2 block text-small font-medium text-foreground-500 flex items-center gap-1 after:content-['*'] after:ml-0.5 after:text-red-500">
                     <Clock size={14} /> Time (8AM - 8PM)
                   </label>
                   <input
