@@ -21,10 +21,6 @@ export const siteConfig = {
       href: "/track-repair",
     },
     {
-      label: "About",
-      href: "/about",
-    },
-    {
       label: "Contact",
       href: "/contact",
     },
@@ -45,10 +41,6 @@ export const siteConfig = {
     {
       label: "Track Repair",
       href: "/track-repair",
-    },
-    {
-      label: "About",
-      href: "/about",
     },
     {
       label: "Contact",
