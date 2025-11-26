@@ -2,16 +2,14 @@
 
 import { Button } from "@heroui/button";
 import { motion } from "framer-motion";
-import Link from "next/link"; // Import Link
+import Link from "next/link";
+import { AnimatedGlobe } from "@/components/AnimatedGlobe"; // Adjust import path if needed
 
 const sectionVariants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: {
-      duration: 0.5,
-      ease: "easeOut",
-    },
+    transition: { duration: 0.5, ease: "easeOut" },
   },
 };
 
@@ -20,11 +18,7 @@ const leftColVariants = {
   visible: {
     opacity: 1,
     x: 0,
-    transition: {
-      duration: 0.6,
-      ease: "easeOut",
-      staggerChildren: 0.12,
-    },
+    transition: { duration: 0.6, ease: "easeOut", staggerChildren: 0.12 },
   },
 };
 
@@ -33,23 +27,7 @@ const textItemVariants = {
   visible: {
     opacity: 1,
     y: 0,
-    transition: {
-      duration: 0.45,
-      ease: "easeOut",
-    },
-  },
-};
-
-const rightColVariants = {
-  hidden: { opacity: 0, x: 30, scale: 0.95 },
-  visible: {
-    opacity: 1,
-    x: 0,
-    scale: 1,
-    transition: {
-      duration: 0.6,
-      ease: "easeOut",
-    },
+    transition: { duration: 0.45, ease: "easeOut" },
   },
 };
 
@@ -61,25 +39,29 @@ export default function HeroSection() {
       initial="hidden"
       animate="visible"
     >
-      {/* Faded image background - Hidden on mobile */}
-      <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden hidden md:block">
-        <div className="absolute inset-y-0 right-0 w-full bg-[url('/images/hero-tech-placeholder.png')] bg-right bg-no-repeat bg-contain opacity-60" />
-        <div className="absolute inset-y-0 left-0 right-1/4 bg-gradient-to-r from-background via-background/80 to-transparent" />
+      {/* Background Image Logic remains the same... */}
+      <div className="hidden md:block absolute top-0 right-0 h-full w-[55%] pointer-events-none select-none">
+        <img
+          src="https://images.unsplash.com/photo-1581092921461-eab62e97a782?q=80&w=2070&auto=format&fit=crop"
+          alt="Tech Repair Background"
+          className="w-full h-full object-cover opacity-90"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-background to-transparent" />
       </div>
 
-      {/* Main Container */}
-      <div className="mx-auto w-full max-w-6xl px-4 md:px-6">
-        <div className="flex w-full flex-col lg:flex-row lg:items-center">
-          {/* Left side: copy */}
+      <div className="relative mx-auto w-full max-w-6xl px-4 md:px-6 z-10">
+        <div className="flex w-full flex-col lg:flex-row lg:items-center justify-between">
+          {/* --- LEFT SIDE: CONTENT --- */}
           <motion.div
-            className="flex-1 space-y-6 py-10 lg:py-0"
+            className="flex-1 space-y-6 py-10 lg:py-0 max-w-2xl"
             variants={leftColVariants}
           >
+            {/* ... Content remains exactly the same ... */}
             <motion.div className="space-y-3" variants={textItemVariants}>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
                 Infinite Tech Repairs
               </p>
-
               <h1 className="text-3xl font-semibold leading-tight md:text-4xl lg:text-5xl">
                 <span className="block">We Fix Everything.</span>
                 <span className="mt-1 block text-blue-500">
@@ -101,7 +83,6 @@ export default function HeroSection() {
               className="flex flex-wrap gap-4"
               variants={textItemVariants}
             >
-              {/* UPDATED: Added as={Link} and href="/book" */}
               <Button
                 as={Link}
                 href="/book-repair"
@@ -111,7 +92,6 @@ export default function HeroSection() {
               >
                 Book a Repair
               </Button>
-
               <Button variant="ghost" color="primary" size="lg">
                 Check Repair Status
               </Button>
@@ -125,7 +105,6 @@ export default function HeroSection() {
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 <span>Same-day diagnostics</span>
               </div>
-
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               <span>No fix, no fee</span>
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -133,14 +112,16 @@ export default function HeroSection() {
             </motion.div>
           </motion.div>
 
-          {/* Right side: visual alignment area */}
+          {/* --- RIGHT SIDE: GLOBE --- */}
+          {/* 1. hidden md:block -> Hides on mobile, shows on tablet/desktop 
+             2. w-[500px] h-[500px] -> Sets a fixed, smaller size for the globe container
+             3. relative -> Ensures the globe canvas stays inside
+          */}
           <motion.div
-            className="hidden lg:flex flex-1 items-center justify-center"
-            variants={rightColVariants}
+            variants={textItemVariants}
+            className="hidden md:block relative w-full lg:w-1/2 h-[400px] lg:h-[600px] mt-10 lg:mt-0"
           >
-            <div className="h-[320px] w-full max-w-md">
-              {/* Desktop Image Placeholder */}
-            </div>
+            <AnimatedGlobe />
           </motion.div>
         </div>
       </div>

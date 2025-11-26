@@ -1,9 +1,10 @@
 "use client";
 
-import { ContactSection } from "@/components/ContactSection";
 import HeroSection from "@/components/HeroSection";
-import { PricingSection } from "@/components/PricingSection";
 import { RepairServicesSection } from "@/components/RepairServicesSection";
+import { ReviewsSection } from "@/components/Reviews";
+import { PricingSection } from "@/components/PricingSection";
+import { ContactSection } from "@/components/ContactSection";
 
 export default function Home() {
   return (
@@ -11,6 +12,7 @@ export default function Home() {
       <HeroSection />
       <RepairServicesSection />
       <PricingSection />
+      <ReviewsSection />
       <ContactSection />
     </>
   );
