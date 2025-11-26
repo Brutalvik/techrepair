@@ -119,7 +119,7 @@ export default function HeroSection() {
           */}
           <motion.div
             variants={textItemVariants}
-            className="hidden md:block relative w-full lg:w-1/2 h-[400px] lg:h-[600px] mt-10 lg:mt-0"
+            className="hidden lg:block relative w-full lg:w-1/2 h-[400px] lg:h-[600px] mt-10 lg:mt-0"
           >
             <AnimatedGlobe />
           </motion.div>
