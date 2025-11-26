@@ -65,7 +65,7 @@ export const PricingSection = () => {
               <Button
                 className="w-full"
                 color="primary"
-                variant="flat"
+                variant="solid"
                 radius="full"
               >
                 Book {category.title}
