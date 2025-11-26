@@ -12,8 +12,8 @@ import {
 import { link as linkStyles } from "@heroui/theme";
 import NextLink from "next/link";
 import clsx from "clsx";
-import { useState } from "react"; // 1. Import useState
-import { usePathname } from "next/navigation"; // 2. Import usePathname
+import { useState } from "react";
+import { usePathname } from "next/navigation";
 
 import { siteConfig } from "@/config/site";
 import { ThemeSwitch } from "@/components/theme-switch";
@@ -21,20 +21,23 @@ import { Logo } from "@/components/icons";
 import { Tooltip } from "@heroui/tooltip";
 
 export const Navbar = () => {
-  // 3. State to control the mobile menu
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  // 4. Get current path to determine navigation logic
   const pathname = usePathname();
+
+  // Helper: Define which labels correspond to ID sections on the home page
+  // You can easily add "Contact" or "Testimonials" here later
+  const homeSections: Record<string, string> = {
+    Services: "#services",
+    Pricing: "#pricing",
+  };
 
   const handleNavClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
     href: string
   ) => {
-    // Always close the mobile menu when a link is clicked
     setIsMenuOpen(false);
 
-    // LOGIC: If it's an anchor link (starts with #) AND we are on the home page
+    // If it's an anchor link (starts with #) AND we are on the home page
     if (href.startsWith("#") && pathname === "/") {
       e.preventDefault();
       const element = document.getElementById(href.substring(1));
@@ -42,14 +45,12 @@ export const Navbar = () => {
         element.scrollIntoView({ behavior: "smooth" });
       }
     }
-    // If we are NOT on home page, we let the default NextLink behavior happen.
   };
 
   return (
     <HeroUINavbar
       maxWidth="xl"
       position="sticky"
-      // 5. Bind the state to the Navbar component
       isMenuOpen={isMenuOpen}
       onMenuOpenChange={setIsMenuOpen}
     >
@@ -69,21 +70,22 @@ export const Navbar = () => {
       <NavbarContent className="hidden lg:flex flex-1 justify-center">
         <ul className="flex items-center gap-6">
           {siteConfig.navItems.map((item) => {
-            const isServices = item.label === "Services";
+            // Check if this item is a scrollable section
+            const sectionId = homeSections[item.label];
 
-            // If it's the Services link, adjust HREF based on current pathname
+            // Determine the link:
+            // 1. If it's a section, check if we are on Home (#id) or elsewhere (/#id)
+            // 2. If it's not a section, use the default href from config
             let linkHref = item.href;
-            if (isServices) {
-              linkHref = pathname === "/" ? "#services" : "/#services";
+            if (sectionId) {
+              linkHref = pathname === "/" ? sectionId : `/${sectionId}`;
             }
 
             return (
               <NavbarItem key={item.href}>
                 <NextLink
                   href={linkHref}
-                  onClick={(e) =>
-                    handleNavClick(e, isServices ? "#services" : item.href)
-                  }
+                  onClick={(e) => handleNavClick(e, linkHref)}
                   className={clsx(
                     linkStyles({ color: "foreground" }),
                     "cursor-pointer transition-colors duration-150 hover:text-blue-500 hover:font-semibold"
@@ -149,7 +151,6 @@ export const Navbar = () => {
           </button>
         </Tooltip>
 
-        {/* 7. Toggle is handled automatically by HeroUI using the isMenuOpen prop on parent */}
         <NavbarMenuToggle />
       </NavbarContent>
 
@@ -157,22 +158,19 @@ export const Navbar = () => {
       <NavbarMenu>
         <div className="mx-4 mt-2 flex flex-col gap-2">
           {siteConfig.navItems.map((item, index) => {
-            const isServices = item.label === "Services";
+            // Apply same logic for mobile links
+            const sectionId = homeSections[item.label];
 
-            // Same logic as desktop for the HREF
             let linkHref = item.href;
-            if (isServices) {
-              linkHref = pathname === "/" ? "#services" : "/#services";
+            if (sectionId) {
+              linkHref = pathname === "/" ? sectionId : `/${sectionId}`;
             }
 
             return (
               <NavbarMenuItem key={`${item}-${index}`}>
                 <NextLink
                   href={linkHref}
-                  // 8. This onClick closes the menu AND handles scroll
-                  onClick={(e) =>
-                    handleNavClick(e, isServices ? "#services" : item.href)
-                  }
+                  onClick={(e) => handleNavClick(e, linkHref)}
                   className="w-full text-lg"
                 >
                   {item.label}
