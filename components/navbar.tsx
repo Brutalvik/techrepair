@@ -28,6 +28,7 @@ export const Navbar = () => {
   const homeSections: Record<string, string> = {
     Services: "#services",
     Pricing: "#pricing",
+    Contact: "#contact",
   };
 
   // --- NEW: Handle "Hidden Dock" Logic ---
