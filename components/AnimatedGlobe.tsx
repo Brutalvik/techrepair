@@ -12,10 +12,12 @@ const World = dynamic(
 export function AnimatedGlobe() {
   const globeConfig = {
     pointSize: 4,
-    globeColor: "#062056",
+    // CHANGED: Darker Royal Blue to match your text theme
+    globeColor: "#0b2659",
     showAtmosphere: true,
     atmosphereColor: "#FFFFFF",
     atmosphereAltitude: 0.1,
+    // CHANGED: Deep Blue for the unlit side
     emissive: "#062056",
     emissiveIntensity: 0.1,
     shininess: 0.9,
@@ -397,9 +399,9 @@ export function AnimatedGlobe() {
   ];
 
   return (
-    <div className="absolute inset-0 w-full h-full bg-transparent flex items-center justify-center z-10">
-      <div className="absolute w-full bottom-0 z-40 h-20 bg-gradient-to-b from-transparent to-background/50 pointer-events-none select-none" />
-      <div className="relative aspect-square h-full max-w-full">
+    <div className="relative w-full h-auto aspect-square max-w-[550px] bg-transparent">
+      <div className="absolute w-full bottom-0 z-40 h-1/5 bg-gradient-to-b from-transparent to-background/30 pointer-events-none select-none" />
+      <div className="absolute inset-0 z-10 overflow-hidden rounded-full">
         <World data={sampleArcs} globeConfig={globeConfig} />
       </div>
     </div>

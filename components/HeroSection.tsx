@@ -3,7 +3,8 @@
 import { Button } from "@heroui/button";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { AnimatedGlobe } from "@/components/AnimatedGlobe"; // Adjust import path if needed
+// Make sure this path is correct for your project structure
+import { AnimatedGlobe } from "@/components/AnimatedGlobe";
 
 const sectionVariants = {
   hidden: { opacity: 0 },
@@ -39,29 +40,31 @@ export default function HeroSection() {
       initial="hidden"
       animate="visible"
     >
-      {/* Background Image Logic remains the same... */}
+      {/* --- BACKGROUND IMAGE --- */}
       <div className="hidden md:block absolute top-0 right-0 h-full w-[55%] pointer-events-none select-none">
         <img
           src="https://images.unsplash.com/photo-1581092921461-eab62e97a782?q=80&w=2070&auto=format&fit=crop"
           alt="Tech Repair Background"
           className="w-full h-full object-cover opacity-90"
         />
+
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-background to-transparent" />
       </div>
 
+      {/* Main Container */}
       <div className="relative mx-auto w-full max-w-6xl px-4 md:px-6 z-10">
-        <div className="flex w-full flex-col lg:flex-row lg:items-center justify-between">
-          {/* --- LEFT SIDE: CONTENT --- */}
+        <div className="flex w-full flex-col lg:flex-row lg:items-center justify-between min-h-[600px]">
+          {/* Left side: copy */}
           <motion.div
-            className="flex-1 space-y-6 py-10 lg:py-0 max-w-2xl"
+            className="flex-1 space-y-6 py-10 lg:py-0 max-w-2xl z-20"
             variants={leftColVariants}
           >
-            {/* ... Content remains exactly the same ... */}
             <motion.div className="space-y-3" variants={textItemVariants}>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
                 Infinite Tech Repairs
               </p>
+
               <h1 className="text-3xl font-semibold leading-tight md:text-4xl lg:text-5xl">
                 <span className="block">We Fix Everything.</span>
                 <span className="mt-1 block text-blue-500">
@@ -92,6 +95,7 @@ export default function HeroSection() {
               >
                 Book a Repair
               </Button>
+
               <Button variant="ghost" color="primary" size="lg">
                 Check Repair Status
               </Button>
@@ -105,6 +109,7 @@ export default function HeroSection() {
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 <span>Same-day diagnostics</span>
               </div>
+
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
               <span>No fix, no fee</span>
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -112,14 +117,13 @@ export default function HeroSection() {
             </motion.div>
           </motion.div>
 
-          {/* --- RIGHT SIDE: GLOBE --- */}
-          {/* 1. hidden md:block -> Hides on mobile, shows on tablet/desktop 
-             2. w-[500px] h-[500px] -> Sets a fixed, smaller size for the globe container
-             3. relative -> Ensures the globe canvas stays inside
+          {/* --- RIGHT SIDE: GLOBE CONTAINER --- */}
+          {/* UPDATED: Added 'flex items-center justify-center'.
+              This ensures whatever square shape we put inside stays centered in this tall area.
           */}
           <motion.div
             variants={textItemVariants}
-            className="hidden lg:block relative w-full lg:w-1/2 h-[400px] lg:h-[600px] mt-10 lg:mt-0"
+            className="hidden lg:flex items-center justify-center relative w-full lg:w-1/2 h-[400px] lg:h-[600px] mt-10 lg:mt-0 z-10"
           >
             <AnimatedGlobe />
           </motion.div>
