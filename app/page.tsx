@@ -1,6 +1,7 @@
 "use client";
 
 import HeroSection from "@/components/HeroSection";
+import { PricingSection } from "@/components/PricingSection";
 import { RepairServicesSection } from "@/components/RepairServicesSection";
 
 export default function Home() {
@@ -8,6 +9,7 @@ export default function Home() {
     <>
       <HeroSection />
       <RepairServicesSection />
+      <PricingSection />
     </>
   );
 }
