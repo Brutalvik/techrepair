@@ -1,6 +1,6 @@
 /**
  * Vercel Serverless Function Bridge
- * FIX: Uses URL manipulation to correctly resolve the path segments expected by Fastify's router.
+ * FIX: Adjusts route registration and path injection to avoid 404/405 errors caused by ambiguous '/api' prefixing.
  */
 
 import Fastify from "fastify";
@@ -25,7 +25,7 @@ async function buildFastifyApp() {
   // 1. Plugins
   await fastify.register(cors, {
     origin: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"], // Added HEAD for good measure
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
     allowedHeaders: ["Content-Type", "Authorization"],
   });
 
@@ -35,12 +35,12 @@ async function buildFastifyApp() {
   });
 
   // 2. Register Routes
-  // Note: Health check is registered at the root (/) which Vercel maps to /api
+  // CRITICAL CHANGE: Register all routes at the root (/) level of the Fastify router.
+  // We will clean the incoming Vercel URL to match this format.
   await fastify.register(healthRoutes);
-  await fastify.register(bookingRoutes, { prefix: "/api" });
-  await fastify.register(adminRoutes, { prefix: "/api" });
+  await fastify.register(bookingRoutes); // Removed { prefix: "/api" }
+  await fastify.register(adminRoutes); // Removed { prefix: "/api" }
 
-  // IMPORTANT: Wait for Fastify to be fully ready (routes registered, plugins loaded)
   await fastify.ready();
 
   fastifyApp = fastify;
@@ -54,23 +54,28 @@ const FASTIFY_APP_PROMISE = buildFastifyApp();
 const executeFastifyRequest = async (req, method) => {
   const app = await FASTIFY_APP_PROMISE; // Wait for initialization
 
-  // 1. Get the raw path from Vercel's Request object
-  // Note: req.url includes the domain and path segment from the Vercel invocation
   const url = new URL(req.url);
 
-  // 2. CRITICAL PATH CLEANUP: Get the path Fastify expects (e.g., /api/admin/bookings)
-  const path = url.pathname + url.search; // Include search params in the URL
+  // CRITICAL PATH RESOLUTION:
+  // 1. Get the path (e.g., /api/admin/bookings)
+  let path = url.pathname;
 
-  // Normalize Headers to a simple object for Fastify injection
+  // 2. Remove the leading '/api' segment ONLY if it exists, to match Fastify's root registration.
+  // Example: /api/admin/bookings -> /admin/bookings
+  if (path.startsWith("/api")) {
+    path = path.substring(4); // Remove "/api"
+  }
+
+  // 3. Re-add search parameters
+  path = path + url.search;
+
   const headers = Object.fromEntries(req.headers.entries());
 
   let body = undefined;
   if (method === "POST" || method === "PATCH") {
     try {
-      // Read the body for POST/PATCH. Use req.clone() as the stream might be consumed elsewhere.
       body = await req.clone().json();
     } catch (e) {
-      // If body parsing fails (e.g., empty body), pass empty object
       body = {};
     }
   }
@@ -79,13 +84,14 @@ const executeFastifyRequest = async (req, method) => {
     app.inject(
       {
         method: method,
-        url: path,
-        headers: headers, // Pass all headers
-        payload: body ? JSON.stringify(body) : undefined, // Stringify payload if present
+        url: path, // Inject the cleaned path (e.g., /admin/bookings)
+        headers: headers,
+        payload: body ? JSON.stringify(body) : undefined,
       },
       (err, response) => {
         if (err) {
           console.error("Fastify Injection Error:", err);
+          // Return 500 status on internal Fastify failure
           return resolve(
             new Response(
               JSON.stringify({
