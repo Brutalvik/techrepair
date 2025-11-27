@@ -1,6 +1,7 @@
 "use client";
 
 import { Link } from "@heroui/link";
+import NextLink from "next/link"; // Use NextLink for internal navigation
 import React from "react";
 import { BsFacebook } from "react-icons/bs";
 import { FaInstagramSquare } from "react-icons/fa";
@@ -12,15 +13,18 @@ const FooterSection = () => {
         <div className="flex flex-col items-center justify-between gap-8 md:flex-row md:items-start">
           {/* LEFT: Brand & Tagline */}
           <div className="flex flex-col items-center text-center md:items-start md:text-left">
+            {/* DIRECT LINK TO ADMIN */}
             <Link
-              isExternal
+              as={NextLink}
               className="flex items-center gap-2"
-              href="https://infinitetechrepair.com/"
+              href="/admin"
+              title="Go to Admin Panel"
             >
               <p className="text-xl font-bold text-slate-900 dark:text-white">
                 Infinite Tech <span className="text-blue-600">Repairs</span>
               </p>
             </Link>
+
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-slate-500 dark:text-slate-400">
               Restoring your digital life, one device at a time. Fast, reliable,
               and professional service you can trust.
@@ -33,7 +37,6 @@ const FooterSection = () => {
               Connect with us
             </span>
             <div className="flex gap-4">
-              {/* Facebook */}
               <Link
                 href="#"
                 className="group flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-all hover:bg-blue-600 hover:text-white dark:bg-zinc-900 dark:text-slate-400 dark:hover:bg-blue-600 dark:hover:text-white"
@@ -43,8 +46,6 @@ const FooterSection = () => {
                   className="transition-transform group-hover:scale-110"
                 />
               </Link>
-
-              {/* Instagram */}
               <Link
                 href="#"
                 className="group flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-all hover:bg-red-800 hover:text-white dark:bg-zinc-900 dark:text-slate-400 dark:hover:bg-pink-600 dark:hover:text-white"
@@ -54,8 +55,6 @@ const FooterSection = () => {
                   className="transition-transform group-hover:scale-110"
                 />
               </Link>
-
-              {/* X (Twitter) - Custom SVG for the modern look */}
               <Link
                 href="#"
                 className="group flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition-all hover:bg-black hover:text-white dark:bg-zinc-900 dark:text-slate-400 dark:hover:bg-white dark:hover:text-black"
@@ -74,9 +73,11 @@ const FooterSection = () => {
 
         {/* BOTTOM: Divider & Links */}
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-100 pt-8 dark:border-zinc-900 md:flex-row">
-          <p className="text-xs text-slate-500 dark:text-slate-500">
-            © 2025 Infinite Tech Repairs. All Rights Reserved.
-          </p>
+          <div className="flex flex-col items-center md:items-start">
+            <p className="text-xs text-slate-500 dark:text-slate-500">
+              © 2025 Infinite Tech Repairs. All Rights Reserved.
+            </p>
+          </div>
 
           <div className="flex gap-6 text-xs font-medium text-slate-600 dark:text-slate-400">
             <Link

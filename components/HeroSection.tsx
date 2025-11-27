@@ -3,7 +3,6 @@
 import { Button } from "@heroui/button";
 import { motion } from "framer-motion";
 import Link from "next/link";
-// Make sure this path is correct for your project structure
 import { AnimatedGlobe } from "@/components/AnimatedGlobe";
 
 const sectionVariants = {
@@ -40,22 +39,18 @@ export default function HeroSection() {
       initial="hidden"
       animate="visible"
     >
-      {/* --- BACKGROUND IMAGE --- */}
       <div className="hidden md:block absolute top-0 right-0 h-full w-[55%] pointer-events-none select-none">
         <img
           src="https://images.unsplash.com/photo-1581092921461-eab62e97a782?q=80&w=2070&auto=format&fit=crop"
           alt="Tech Repair Background"
           className="w-full h-full object-cover opacity-90"
         />
-
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-background to-transparent" />
       </div>
 
-      {/* Main Container */}
       <div className="relative mx-auto w-full max-w-6xl px-4 md:px-6 z-10">
         <div className="flex w-full flex-col lg:flex-row lg:items-center justify-between min-h-[600px]">
-          {/* Left side: copy */}
           <motion.div
             className="flex-1 space-y-6 py-10 lg:py-0 max-w-2xl z-20"
             variants={leftColVariants}
@@ -96,7 +91,14 @@ export default function HeroSection() {
                 Book a Repair
               </Button>
 
-              <Button variant="ghost" color="primary" size="lg">
+              {/* UPDATED BUTTON HERE */}
+              <Button
+                as={Link}
+                href="/track-repair"
+                variant="ghost"
+                color="primary"
+                size="lg"
+              >
                 Check Repair Status
               </Button>
             </motion.div>
@@ -117,10 +119,6 @@ export default function HeroSection() {
             </motion.div>
           </motion.div>
 
-          {/* --- RIGHT SIDE: GLOBE CONTAINER --- */}
-          {/* UPDATED: Added 'flex items-center justify-center'.
-              This ensures whatever square shape we put inside stays centered in this tall area.
-          */}
           <motion.div
             variants={textItemVariants}
             className="hidden lg:flex items-center justify-center relative w-full lg:w-1/2 h-[400px] lg:h-[600px] mt-10 lg:mt-0 z-10"

@@ -10,6 +10,7 @@ import {
   NavbarMenuItem,
 } from "@heroui/navbar";
 import { link as linkStyles } from "@heroui/theme";
+import { Button } from "@heroui/button"; // <--- IMPORTED BUTTON
 import NextLink from "next/link";
 import clsx from "clsx";
 import { useState, useEffect } from "react";
@@ -22,7 +23,7 @@ import { Tooltip } from "@heroui/tooltip";
 
 export const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(true); // State for dock visibility
+  const [isVisible, setIsVisible] = useState(true);
   const pathname = usePathname();
 
   const homeSections: Record<string, string> = {
@@ -31,23 +32,15 @@ export const Navbar = () => {
     Contact: "#contact",
   };
 
-  // --- NEW: Handle "Hidden Dock" Logic ---
+  // --- Handle "Hidden Dock" Logic ---
   useEffect(() => {
     let lastScrollY = window.scrollY;
 
     const handleScrollAndMouse = (e?: MouseEvent) => {
       const currentScrollY = window.scrollY;
-      const isAtTop = currentScrollY < 10; // User is at the very top of page
-
-      // Check if mouse is near the top (Dock trigger zone - 60px)
-      // We use optional chaining because this function runs on scroll events too (where e is undefined)
+      const isAtTop = currentScrollY < 10;
       const isMouseAtTop = e?.clientY !== undefined && e.clientY < 60;
 
-      // LOGIC:
-      // 1. If menu is open (mobile), ALWAYS show.
-      // 2. If at very top of page, ALWAYS show.
-      // 3. If mouse is hovering the top zone, SHOW.
-      // 4. Otherwise, HIDE.
       if (isMenuOpen || isAtTop || isMouseAtTop) {
         setIsVisible(true);
       } else {
@@ -57,7 +50,6 @@ export const Navbar = () => {
       lastScrollY = currentScrollY;
     };
 
-    // Attach listeners
     window.addEventListener("scroll", () => handleScrollAndMouse());
     window.addEventListener("mousemove", handleScrollAndMouse);
 
@@ -65,7 +57,7 @@ export const Navbar = () => {
       window.removeEventListener("scroll", () => handleScrollAndMouse());
       window.removeEventListener("mousemove", handleScrollAndMouse);
     };
-  }, [isMenuOpen]); // Re-run if menu state changes
+  }, [isMenuOpen]);
 
   const handleNavClick = (
     e: React.MouseEvent<HTMLAnchorElement>,
@@ -87,10 +79,8 @@ export const Navbar = () => {
       position="sticky"
       isMenuOpen={isMenuOpen}
       onMenuOpenChange={setIsMenuOpen}
-      // Apply the transformation classes here
       className={clsx(
         "fixed top-0 z-50 w-full transition-transform duration-300 ease-in-out",
-        // If visible, translate-y-0. If hidden, translate-y-full (move up out of view)
         isVisible ? "translate-y-0" : "-translate-y-full"
       )}
     >
@@ -132,8 +122,22 @@ export const Navbar = () => {
         </ul>
       </NavbarContent>
 
-      <NavbarContent className="hidden sm:flex flex-none" justify="end">
-        <NavbarItem className="hidden sm:flex gap-2">
+      {/* --- DESKTOP RIGHT SIDE --- */}
+      <NavbarContent className="hidden sm:flex flex-none gap-4" justify="end">
+        {/* Book Repair Button (Desktop) */}
+        <NavbarItem>
+          <Button
+            as={NextLink}
+            href="/book-repair"
+            color="primary"
+            variant="solid"
+            className="font-semibold shadow-lg shadow-blue-500/20"
+          >
+            Book a Repair
+          </Button>
+        </NavbarItem>
+
+        <NavbarItem className="hidden sm:flex">
           <Tooltip content="Toggle theme" placement="bottom">
             <button
               type="button"
@@ -147,6 +151,7 @@ export const Navbar = () => {
         </NavbarItem>
       </NavbarContent>
 
+      {/* --- MOBILE RIGHT SIDE --- */}
       <NavbarContent className="sm:hidden basis-1 pl-4" justify="end">
         <Tooltip content="Toggle theme" placement="bottom">
           <button
@@ -161,8 +166,9 @@ export const Navbar = () => {
         <NavbarMenuToggle />
       </NavbarContent>
 
+      {/* --- MOBILE MENU --- */}
       <NavbarMenu>
-        <div className="mx-4 mt-2 flex flex-col gap-2">
+        <div className="mx-4 mt-6 flex flex-col gap-4">
           {siteConfig.navItems.map((item, index) => {
             const sectionId = homeSections[item.label];
             let linkHref = item.href;
@@ -175,13 +181,27 @@ export const Navbar = () => {
                 <NextLink
                   href={linkHref}
                   onClick={(e) => handleNavClick(e, linkHref)}
-                  className="w-full text-lg"
+                  className="w-full text-lg font-medium"
                 >
                   {item.label}
                 </NextLink>
               </NavbarMenuItem>
             );
           })}
+
+          {/* Book Repair Button (Mobile Menu) */}
+          <NavbarMenuItem>
+            <Button
+              as={NextLink}
+              href="/book-repair"
+              color="primary"
+              variant="solid"
+              className="w-full font-semibold shadow-lg shadow-blue-500/20"
+              onPress={() => setIsMenuOpen(false)}
+            >
+              Book a Repair
+            </Button>
+          </NavbarMenuItem>
         </div>
       </NavbarMenu>
     </HeroUINavbar>
