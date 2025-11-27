@@ -344,7 +344,8 @@ export function Chatbot() {
                   By using AI you agree to our{" "}
                   <Link
                     className="text-blue-500 hover:underline"
-                    href="/terms-and-conditions"
+                    href="/ai-terms"
+                    onClick={() => setIsOpen(false)}
                   >
                     Terms and Conditions
                   </Link>

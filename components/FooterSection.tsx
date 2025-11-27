@@ -81,19 +81,19 @@ const FooterSection = () => {
 
           <div className="flex gap-6 text-xs font-medium text-slate-600 dark:text-slate-400">
             <Link
-              href="#"
+              href="/privacy-policy"
               className="transition-colors hover:text-blue-600 dark:hover:text-blue-500 text-current"
             >
               Privacy Policy
             </Link>
             <Link
-              href="#"
+              href="/terms-of-service"
               className="transition-colors hover:text-blue-600 dark:hover:text-blue-500 text-current"
             >
               Terms of Service
             </Link>
             <Link
-              href="#"
+              href="/cookie-policy"
               className="transition-colors hover:text-blue-600 dark:hover:text-blue-500 text-current"
             >
               Cookie Policy
