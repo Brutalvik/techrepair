@@ -62,7 +62,7 @@ export default function TrackRepairPage() {
     setTrackingId(finalId);
 
     try {
-      const res = await fetch(`http://localhost:9000/api/bookings/${finalId}`);
+      const res = await fetch(`/api/bookings/${finalId}`);
       if (!res.ok) throw new Error("Repair not found. Please check your ID.");
       const data = await res.json();
       setRepairData(data);

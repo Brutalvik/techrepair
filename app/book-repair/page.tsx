@@ -125,7 +125,7 @@ export default function BookRepairPage() {
           images: values.images,
         };
 
-        const res = await fetch("http://localhost:9000/api/bookings", {
+        const res = await fetch("/api/bookings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
