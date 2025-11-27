@@ -9,13 +9,14 @@ import {
   ShieldAlert,
   User as UserIcon,
   ArrowUpDown,
-  ArrowUp, // Added
-  ArrowDown, // Added
+  ArrowUp,
+  ArrowDown,
+  Clock, // Added Icon
 } from "lucide-react";
 import { Button } from "@heroui/button";
 import clsx from "clsx";
 
-// Type definition
+// Updated Type definition
 type Booking = {
   id: number;
   tracking_id: string;
@@ -25,6 +26,7 @@ type Booking = {
   status: string;
   created_at: string;
   booking_time: string;
+  updated_at: string; // New Field
 };
 
 type SortConfig = {
@@ -46,7 +48,6 @@ export default function AdminDashboard() {
   const [loadingData, setLoadingData] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
-  // Sorting State
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: "created_at",
     direction: "desc",
@@ -96,8 +97,8 @@ export default function AdminDashboard() {
     }));
   };
 
-  // 3. Helper: Format Time
-  const formatTime = (timeString: string) => {
+  // Helper: Format Time (14:00 -> 2:00 PM)
+  const formatTimeSlot = (timeString: string) => {
     if (!timeString) return "N/A";
     const [hours, minutes] = timeString.split(":");
     const date = new Date();
@@ -105,7 +106,18 @@ export default function AdminDashboard() {
     return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
   };
 
-  // 4. Update Status Handler
+  // Helper: Format Timestamp (For Last Updated)
+  const formatTimestamp = (dateString: string) => {
+    if (!dateString) return "-";
+    return new Date(dateString).toLocaleString([], {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
+  // 3. Update Status Handler
   const handleStatusChange = async (id: number, newStatus: string) => {
     setUpdatingId(id);
     try {
@@ -119,8 +131,18 @@ export default function AdminDashboard() {
       );
 
       if (res.ok) {
+        const updatedRecord = await res.json(); // Backend returns the updated record with new timestamp
+
         setBookings((prev) =>
-          prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b))
+          prev.map((b) =>
+            b.id === id
+              ? {
+                  ...b,
+                  status: newStatus,
+                  updated_at: updatedRecord.data.updated_at, // Update timestamp locally
+                }
+              : b
+          )
         );
       } else {
         alert("Failed to update status");
@@ -149,7 +171,6 @@ export default function AdminDashboard() {
     }
   };
 
-  // --- AUTH LOADING ---
   if (authStatus === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-black">
@@ -158,7 +179,6 @@ export default function AdminDashboard() {
     );
   }
 
-  // --- AUTH UNAUTHENTICATED ---
   if (authStatus === "unauthenticated") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 dark:bg-black">
@@ -188,7 +208,6 @@ export default function AdminDashboard() {
     );
   }
 
-  // --- DASHBOARD ---
   return (
     <div className="min-h-screen w-full bg-slate-50 px-4 py-12 mt-5 dark:bg-black">
       <div className="mx-auto max-w-7xl">
@@ -267,8 +286,8 @@ export default function AdminDashboard() {
                         { label: "ID", key: "tracking_id" },
                         { label: "Customer", key: "customer_name" },
                         { label: "Device", key: "device_type" },
-                        { label: "Date", key: "created_at" },
-                        { label: "Time", key: "booking_time" },
+                        { label: "Booked Time", key: "booking_time" }, // Renamed
+                        { label: "Last Updated", key: "updated_at" }, // New Column
                         { label: "Status", key: "status" },
                       ].map((col) => (
                         <th
@@ -276,13 +295,8 @@ export default function AdminDashboard() {
                           className="cursor-pointer px-6 py-4 font-medium transition-colors hover:bg-slate-100 dark:hover:bg-zinc-800"
                           onClick={() => handleSort(col.key as keyof Booking)}
                         >
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 whitespace-nowrap">
                             {col.label}
-                            {/* DYNAMIC ICON LOGIC:
-                                1. Active & Ascending -> ArrowUp (Blue)
-                                2. Active & Descending -> ArrowDown (Blue)
-                                3. Inactive -> ArrowUpDown (Gray/Faint)
-                            */}
                             {sortConfig.key === col.key ? (
                               sortConfig.direction === "asc" ? (
                                 <ArrowUp size={14} className="text-blue-500" />
@@ -324,12 +338,25 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                           {booking.device_type}
                         </td>
-                        <td className="px-6 py-4 text-slate-500">
-                          {new Date(booking.created_at).toLocaleDateString()}
+
+                        {/* Booked Time Column */}
+                        <td className="px-6 py-4">
+                          <div className="text-slate-700 dark:text-slate-300">
+                            {formatTimeSlot(booking.booking_time)}
+                          </div>
+                          <div className="text-xs text-slate-400">
+                            {new Date(booking.created_at).toLocaleDateString()}
+                          </div>
                         </td>
-                        <td className="px-6 py-4 text-slate-500">
-                          {formatTime(booking.booking_time)}
+
+                        {/* Last Updated Column */}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-slate-500">
+                            <Clock size={14} />
+                            <span>{formatTimestamp(booking.updated_at)}</span>
+                          </div>
                         </td>
+
                         <td className="px-6 py-4">
                           <span
                             className={clsx(
@@ -394,7 +421,7 @@ export default function AdminDashboard() {
                     </span>
                   </div>
 
-                  <div className="mb-4 space-y-2">
+                  <div className="mb-4 space-y-3">
                     <div>
                       <p className="text-xs text-slate-500">Customer</p>
                       <p className="font-medium text-slate-900 dark:text-white">
@@ -402,7 +429,8 @@ export default function AdminDashboard() {
                       </p>
                       <p className="text-xs text-slate-400">{booking.email}</p>
                     </div>
-                    <div className="flex justify-between">
+
+                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-xs text-slate-500">Device</p>
                         <p className="text-sm text-slate-700 dark:text-slate-300">
@@ -410,18 +438,24 @@ export default function AdminDashboard() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xs text-slate-500">Date & Time</p>
+                        <p className="text-xs text-slate-500">Booked Slot</p>
                         <p className="text-sm text-slate-700 dark:text-slate-300">
-                          {new Date(booking.created_at).toLocaleDateString()}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {formatTime(booking.booking_time)}
+                          {new Date(booking.created_at).toLocaleDateString()} at{" "}
+                          {formatTimeSlot(booking.booking_time)}
                         </p>
                       </div>
                     </div>
+
+                    <div className="flex items-center justify-between border-t border-dashed border-slate-200 pt-3 dark:border-zinc-800">
+                      <p className="text-xs text-slate-500">Last Updated</p>
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-300 flex items-center gap-1">
+                        <Clock size={12} />
+                        {formatTimestamp(booking.updated_at)}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 dark:border-zinc-800">
+                  <div className="pt-3 border-t border-slate-100 dark:border-zinc-800">
                     <label className="mb-1.5 block text-xs font-medium text-slate-500">
                       Update Status
                     </label>
