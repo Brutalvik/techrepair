@@ -1,15 +1,13 @@
 /**
  * Vercel Serverless Function Bridge
- * This file wraps the Fastify application logic to run as a single Vercel/Next.js API route handler.
- * * NOTE: This relies on the 'routes' folder being located in the root directory of your Next.js project.
- * Vercel will automatically inject the DATABASE_URL and other environment variables.
+ * FIX: Separates request methods (POST, PATCH) to ensure Vercel correctly routes the request verb.
  */
 
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import fastifyPostgres from "@fastify/postgres";
 
-//\/app/api/[[...route]] path.
+// Import your modular route definitions from the root 'routes' folder
 import healthRoutes from "../../../routes/health.mjs";
 import bookingRoutes from "../../../routes/bookings.mjs";
 import adminRoutes from "../../../routes/admin.mjs";
@@ -22,25 +20,20 @@ async function buildFastifyApp() {
     return fastifyApp;
   }
 
-  // Initialize Fastify
-  // Logger is set to false to prevent excessive logging in Vercel/Cloud logs.
   const fastify = Fastify({ logger: false });
 
   // 1. Plugins
   await fastify.register(cors, {
-    origin: true, // Allows all origins (your Vercel frontend)
+    origin: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   });
 
-  // Database Connection: Uses DATABASE_URL injected by Vercel secrets
-  //
   await fastify.register(fastifyPostgres, {
     connectionString: process.env.DATABASE_URL,
   });
 
   // 2. Register Routes
-  // Fastify will map the routes defined inside these modules to Vercel's /api/* path
   await fastify.register(healthRoutes);
   await fastify.register(bookingRoutes, { prefix: "/api" });
   await fastify.register(adminRoutes, { prefix: "/api" });
@@ -49,29 +42,90 @@ async function buildFastifyApp() {
   return fastifyApp;
 }
 
-// Handler functions required by Next.js API Routes (Serverless Functions)
-
-const handler = async (req, res) => {
+// --- CORE EXECUTOR ---
+// This function manually processes the request using the Fastify instance
+const executeFastifyRequest = async (req, method, body = null) => {
   const app = await buildFastifyApp();
 
-  // Core bridge logic: We use a Promise and Fastify's internal event emitter
-  // to process the Next.js Request/Response objects correctly.
+  // Vercel/Next.js Request object is non-standard for Fastify,
+  // so we must extract the URL, headers, and body manually.
+  const url = new URL(req.url);
+  const headers = {};
+  for (const [key, value] of req.headers.entries()) {
+    headers[key] = value;
+  }
+
+  // Fastify request object simulation
+  const fastifyReq = {
+    method: method,
+    url: url.pathname,
+    query: Object.fromEntries(url.searchParams),
+    headers: headers,
+    // Inject parsed JSON body for POST/PATCH requests
+    body: body,
+    // This is a minimal simulation, primarily targeting the router functionality
+  };
+
   return new Promise((resolve) => {
-    app.server.emit("request", req, {
-      // This mocking is necessary because Fastify expects Node.js http objects,
-      // while Vercel/Next.js uses standard Web Request/Response.
-      end: (body) =>
+    app.inject(
+      {
+        method: method,
+        url: fastifyReq.url,
+        headers: fastifyReq.headers,
+        payload: body ? JSON.stringify(body) : undefined, // Pass payload as string
+        query: fastifyReq.query,
+      },
+      (err, response) => {
+        if (err) {
+          console.error("Fastify Injection Error:", err);
+          return resolve(
+            new Response(JSON.stringify({ error: "Internal Server Error" }), {
+              status: 500,
+            })
+          );
+        }
+
+        // Return Vercel standard Response object
         resolve(
-          new Response(body, {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
+          new Response(response.body, {
+            status: response.statusCode,
+            headers: {
+              "Content-Type":
+                response.headers["content-type"] || "application/json",
+            },
           })
-        ),
-      setHeader: (name, value) => {},
-      writeHead: (statusCode) => {},
-    });
+        );
+      }
+    );
   });
 };
 
-// Next.js/Vercel requires these named exports for each HTTP verb.
-export { handler as GET, handler as POST, handler as PATCH };
+// --- EXPORTED HANDLERS ---
+// These export functions are what Vercel calls.
+
+export async function GET(req) {
+  // GET requests usually have query params and no body
+  return executeFastifyRequest(req, "GET");
+}
+
+export async function POST(req) {
+  try {
+    const body = await req.json(); // Parse the request body for POST
+    return executeFastifyRequest(req, "POST", body);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+      status: 400,
+    });
+  }
+}
+
+export async function PATCH(req) {
+  try {
+    const body = await req.json(); // Parse the request body for PATCH
+    return executeFastifyRequest(req, "PATCH", body);
+  } catch (e) {
+    return new Response(JSON.stringify({ error: "Invalid JSON body" }), {
+      status: 400,
+    });
+  }
+}
