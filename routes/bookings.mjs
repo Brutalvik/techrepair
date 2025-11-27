@@ -9,7 +9,7 @@ import "dotenv/config"; // Loads variables from .env
 
 export default async function bookingRoutes(fastify, options) {
   // 1. CREATE BOOKING
-  fastify.post("/bookings", async (request, reply) => {
+  fastify.post("/api/bookings", async (request, reply) => {
     const {
       customerName,
       email,
@@ -71,7 +71,7 @@ export default async function bookingRoutes(fastify, options) {
 
   // 2. GET BOOKING STATUS
   // Endpoint: GET /api/bookings/:trackingId
-  fastify.get("/bookings/:trackingId", async (request, reply) => {
+  fastify.get("/api/bookings/:trackingId", async (request, reply) => {
     const { trackingId } = request.params;
 
     // ADDED: updated_at

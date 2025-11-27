@@ -4,7 +4,7 @@
  */
 export default async function adminRoutes(fastify, options) {
   // 1. GET BOOKINGS (With Global Search)
-  fastify.get("/admin/bookings", async (request, reply) => {
+  fastify.get("/api/admin/bookings", async (request, reply) => {
     const { q } = request.query;
 
     try {
@@ -50,7 +50,7 @@ export default async function adminRoutes(fastify, options) {
   });
 
   // 2. UPDATE STATUS
-  fastify.patch("/admin/bookings/:id/status", async (request, reply) => {
+  fastify.patch("/api/admin/bookings/:id/status", async (request, reply) => {
     const { id } = request.params;
     const { status } = request.body;
 
@@ -96,7 +96,7 @@ export default async function adminRoutes(fastify, options) {
 
   // 3. ARCHIVE BOOKING (New!)
   // Moves record from 'bookings' to 'archived_bookings' safely
-  fastify.post("/admin/bookings/:id/archive", async (request, reply) => {
+  fastify.post("/api/admin/bookings/:id/archive", async (request, reply) => {
     const { id } = request.params;
     const client = await fastify.pg.connect(); // Get a client for transaction
 
@@ -144,7 +144,7 @@ export default async function adminRoutes(fastify, options) {
 
   // 4. GET ARCHIVED BOOKINGS
   // Endpoint: GET /api/admin/archived-bookings
-  fastify.get("/admin/archived-bookings", async (request, reply) => {
+  fastify.get("/api/admin/archived-bookings", async (request, reply) => {
     try {
       const query = `
         SELECT 

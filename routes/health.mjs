@@ -1,5 +1,5 @@
 export default async function healthRoutes(fastify, options) {
-  fastify.get("/", async (request, reply) => {
+  fastify.get("/api/", async (request, reply) => {
     try {
       const result = await fastify.pg.query("SELECT NOW()");
       return {
