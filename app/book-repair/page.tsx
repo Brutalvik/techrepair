@@ -16,7 +16,6 @@ import {
   Mail,
   Phone,
   FileText,
-  Copy,
 } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Input, Textarea } from "@heroui/input";
@@ -35,13 +34,13 @@ import {
 const LOCATIONS = [
   {
     id: "downtown",
-    name: "Downtown Tech Hub",
-    address: "123 Main St, Downtown",
+    name: "Downtown Hub", // Shortened name for compact UI
+    address: "123 Main St",
   },
   {
     id: "westside",
-    name: "Westside Repair Center",
-    address: "456 West Ave, Westside",
+    name: "Westside Center",
+    address: "456 West Ave",
   },
 ];
 
@@ -50,45 +49,38 @@ const DEVICE_TYPES = [
   "Laptop",
   "Tablet",
   "Console",
-  "Smartwatch",
+  "Watch", // Shortened
   "Other",
 ];
 
 // --- VALIDATION ---
 const BookingSchema = Yup.object().shape({
-  customerName: Yup.string().min(2, "Too short").required("Name is required"),
-  email: Yup.string().email("Invalid email").required("Email is required"),
-  phone: Yup.string()
-    .min(10, "Phone number too short")
-    .required("Phone is required"),
-  deviceType: Yup.string().required("Please select a device"),
-  location: Yup.string().required("Please select a service location"),
-  issueDescription: Yup.string()
-    .min(10, "Describe issue in detail")
-    .required("Description required"),
-  date: Yup.string().required("Date is required"),
+  customerName: Yup.string().min(2, "Too short").required("Required"),
+  email: Yup.string().email("Invalid email").required("Required"),
+  phone: Yup.string().min(10, "Too short").required("Required"),
+  deviceType: Yup.string().required("Required"),
+  location: Yup.string().required("Required"),
+  issueDescription: Yup.string().min(10, "Too short").required("Required"),
+  date: Yup.string().required("Required"),
   time: Yup.string()
-    .required("Time is required")
-    .test("is-business-hours", "Open 8am-8pm", (val) => {
+    .required("Required")
+    .test("is-business-hours", "8am-8pm only", (val) => {
       if (!val) return false;
       const [h] = val.split(":").map(Number);
       return h >= 8 && h <= 20;
     }),
-  images: Yup.array().max(3, "Max 3 images"),
+  images: Yup.array().max(3, "Max 3"),
 });
 
 export default function BookRepairPage() {
-  // 1. Redux Hooks
   const dispatch = useDispatch();
   const bookingState = useSelector((state: RootState) => state.booking);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
-  // New state to hold the ID for display
   const [confirmedTrackingId, setConfirmedTrackingId] = useState("");
 
-  // 2. Default Dates (Memoized)
   const { defaultDate, defaultTime } = useMemo(() => {
     const now = new Date();
     const year = now.getFullYear();
@@ -101,7 +93,6 @@ export default function BookRepairPage() {
     return { defaultDate: dateStr, defaultTime: `${hours}:${minutes}` };
   }, []);
 
-  // 3. Initialize Formik with REDUX State
   const formik = useFormik({
     enableReinitialize: true,
     initialValues: {
@@ -146,17 +137,9 @@ export default function BookRepairPage() {
         }
 
         const data = await res.json();
-        // Expected response: { success: true, dbId: 1, trackingId: "TR-8339", ... }
-
-        // Success Logic
         setSubmitSuccess(true);
-        // Save the specific string ID to show the user
         setConfirmedTrackingId(data.trackingId);
-
-        // Update Redux
         if (data.trackingId) dispatch(setTrackingId(data.trackingId));
-
-        // Clear the form data from Redux since it's submitted
         dispatch(resetBooking());
         formik.resetForm();
       } catch (err: any) {
@@ -167,12 +150,10 @@ export default function BookRepairPage() {
     },
   });
 
-  // 4. Auto-Sync
   useEffect(() => {
     dispatch(updateBookingField(formik.values));
   }, [formik.values, dispatch]);
 
-  // Image Handlers
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
@@ -197,49 +178,39 @@ export default function BookRepairPage() {
     formik.setFieldValue("images", newImages);
   };
 
-  // --- SUCCESS VIEW ---
   if (submitSuccess) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
+      <div className="flex min-h-screen flex-col items-center justify-center px-4 text-center bg-slate-50 dark:bg-black">
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
+          initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="max-w-md w-full rounded-3xl bg-green-50 p-10 dark:bg-green-900/20 shadow-xl"
+          className="max-w-md w-full rounded-2xl bg-white p-8 dark:bg-zinc-900 shadow-xl border border-slate-100 dark:border-zinc-800"
         >
-          <CheckCircle className="mx-auto h-20 w-20 text-green-500" />
-          <h2 className="mt-6 text-3xl font-bold text-green-700 dark:text-green-400">
+          <CheckCircle className="mx-auto h-16 w-16 text-green-500" />
+          <h2 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">
             Booking Confirmed!
           </h2>
-          <p className="mt-2 text-lg text-slate-600 dark:text-slate-300">
-            We have received your request.
-          </p>
-
-          {/* Tracking ID Display */}
-          <div className="mt-6 rounded-xl bg-white p-4 shadow-sm border border-green-100 dark:bg-black/40 dark:border-green-800">
-            <p className="text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
-              Your Tracking ID
+          <div className="mt-6 rounded-lg bg-slate-50 p-4 border border-slate-100 dark:bg-black/40 dark:border-zinc-800">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Tracking ID
             </p>
-            <div className="mt-1 flex items-center justify-center gap-2">
-              <span className="text-2xl font-mono font-bold text-slate-800 dark:text-white">
-                {confirmedTrackingId}
-              </span>
-            </div>
+            <span className="text-3xl font-mono font-bold text-blue-600 dark:text-blue-400 block mt-1">
+              {confirmedTrackingId}
+            </span>
           </div>
-          <p className="mt-2 text-sm text-slate-500">
-            Save this ID to track your repair status.
+          <p className="mt-4 text-sm text-slate-500">
+            Use this ID to track your repair status.
           </p>
-
           <Button
-            className="mt-8 w-full font-bold"
+            className="mt-6 w-full font-semibold"
             color="primary"
             variant="solid"
-            size="lg"
             onPress={() => {
               setSubmitSuccess(false);
               setConfirmedTrackingId("");
             }}
           >
-            Book Another Repair
+            Book Another
           </Button>
         </motion.div>
       </div>
@@ -247,82 +218,81 @@ export default function BookRepairPage() {
   }
 
   return (
-    <section className="min-h-screen w-full bg-slate-50 py-12 dark:bg-black">
-      <div className="mx-auto max-w-4xl px-4">
-        <div className="mb-10 text-center">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white md:text-4xl">
+    <section className="min-h-screen w-full bg-slate-50 py-8 px-4 md:py-12 dark:bg-black">
+      <div className="mx-auto max-w-5xl">
+        <div className="mb-6 text-center">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white md:text-3xl">
             Book a Repair
           </h1>
-          <p className="mt-2 text-slate-500 dark:text-slate-400">
-            Select a location, describe your issue, and pick a time.
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            Tell us about your device and pick a slot.
           </p>
         </div>
 
         <form
           onSubmit={formik.handleSubmit}
-          className="grid gap-8 md:grid-cols-2"
+          className="grid gap-5 md:grid-cols-12 items-start"
         >
-          {/* LEFT COLUMN */}
-          <div className="space-y-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-zinc-900 md:p-8">
-            <h3 className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-white">
-              <User className="text-blue-500" size={20} /> Personal Details
-            </h3>
-
-            <div className="space-y-4">
-              <Input
-                label="Full Name"
-                placeholder="John Doe"
-                startContent={<User size={16} className="text-slate-400" />}
-                {...formik.getFieldProps("customerName")}
-                errorMessage={
-                  formik.touched.customerName && formik.errors.customerName
-                }
-                isInvalid={
-                  formik.touched.customerName && !!formik.errors.customerName
-                }
-                isRequired
-              />
-              <Input
-                label="Email"
-                placeholder="john@example.com"
-                startContent={<Mail size={16} className="text-slate-400" />}
-                {...formik.getFieldProps("email")}
-                errorMessage={formik.touched.email && formik.errors.email}
-                isInvalid={formik.touched.email && !!formik.errors.email}
-                isRequired
-              />
-              <Input
-                label="Phone Number"
-                placeholder="(555) 123-4567"
-                startContent={<Phone size={16} className="text-slate-400" />}
-                {...formik.getFieldProps("phone")}
-                errorMessage={formik.touched.phone && formik.errors.phone}
-                isInvalid={formik.touched.phone && !!formik.errors.phone}
-                isRequired
-              />
+          {/* LEFT COLUMN (Wider): Personal & Device */}
+          <div className="md:col-span-7 space-y-5">
+            {/* Personal Details Card */}
+            <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 dark:bg-zinc-900 dark:border-zinc-800">
+              <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <User size={16} /> Contact Info
+              </h3>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Input
+                    label="Name"
+                    size="sm"
+                    variant="bordered"
+                    {...formik.getFieldProps("customerName")}
+                    isInvalid={
+                      formik.touched.customerName &&
+                      !!formik.errors.customerName
+                    }
+                    errorMessage={
+                      formik.touched.customerName && formik.errors.customerName
+                    }
+                  />
+                  <Input
+                    label="Email"
+                    size="sm"
+                    variant="bordered"
+                    {...formik.getFieldProps("email")}
+                    isInvalid={formik.touched.email && !!formik.errors.email}
+                    errorMessage={formik.touched.email && formik.errors.email}
+                  />
+                </div>
+                <Input
+                  label="Phone"
+                  size="sm"
+                  variant="bordered"
+                  {...formik.getFieldProps("phone")}
+                  isInvalid={formik.touched.phone && !!formik.errors.phone}
+                  errorMessage={formik.touched.phone && formik.errors.phone}
+                />
+              </div>
             </div>
 
-            <div className="my-6 h-px bg-slate-100 dark:bg-zinc-800" />
+            {/* Device Info Card */}
+            <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 dark:bg-zinc-900 dark:border-zinc-800">
+              <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <Smartphone size={16} /> Device Details
+              </h3>
 
-            <h3 className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-white">
-              <Smartphone className="text-blue-500" size={20} /> Device Info
-            </h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="mb-2 block text-small font-medium text-foreground-500 after:content-['*'] after:ml-0.5 after:text-red-500">
-                  Device Type
-                </label>
-                <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-4">
+                {/* Device Type Grid */}
+                <div className="grid grid-cols-3 gap-2">
                   {DEVICE_TYPES.map((type) => (
                     <div
                       key={type}
                       onClick={() => formik.setFieldValue("deviceType", type)}
                       className={clsx(
-                        "cursor-pointer rounded-lg border px-4 py-2 text-center text-sm transition-all",
+                        "cursor-pointer rounded-lg border px-2 py-2 text-center text-xs font-medium transition-all",
                         formik.values.deviceType === type
                           ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400"
-                          : "border-slate-200 hover:border-blue-300 dark:border-zinc-800 dark:hover:border-blue-700"
+                          : "border-slate-200 hover:border-blue-300 dark:border-zinc-700 dark:hover:border-zinc-600"
                       )}
                     >
                       {type}
@@ -330,108 +300,99 @@ export default function BookRepairPage() {
                   ))}
                 </div>
                 {formik.touched.deviceType && formik.errors.deviceType && (
-                  <div className="mt-1 text-xs text-danger">
+                  <p className="text-xs text-red-500">
                     {formik.errors.deviceType}
-                  </div>
+                  </p>
                 )}
-              </div>
 
-              <Textarea
-                label="Issue Description"
-                placeholder="Describe the problem..."
-                minRows={3}
-                startContent={
-                  <FileText size={16} className="mt-1 text-slate-400" />
-                }
-                {...formik.getFieldProps("issueDescription")}
-                errorMessage={
-                  formik.touched.issueDescription &&
-                  formik.errors.issueDescription
-                }
-                isInvalid={
-                  formik.touched.issueDescription &&
-                  !!formik.errors.issueDescription
-                }
-                isRequired
-              />
+                <Textarea
+                  label="Describe the Issue"
+                  placeholder="Screen cracked, not charging, etc."
+                  minRows={2}
+                  variant="bordered"
+                  {...formik.getFieldProps("issueDescription")}
+                  isInvalid={
+                    formik.touched.issueDescription &&
+                    !!formik.errors.issueDescription
+                  }
+                  errorMessage={
+                    formik.touched.issueDescription &&
+                    formik.errors.issueDescription
+                  }
+                />
 
-              {/* Images */}
-              <div>
-                <label className="mb-2 block text-small font-medium text-foreground-500">
-                  Upload Images (Max 3)
-                </label>
-                <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-4 text-center transition-colors hover:border-blue-400 dark:border-zinc-700 dark:bg-zinc-800/50">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    id="image-upload"
-                    disabled={formik.values.images.length >= 3}
-                  />
-                  <label
-                    htmlFor="image-upload"
-                    className="cursor-pointer flex flex-col items-center"
-                  >
-                    <Upload className="mb-2 text-slate-400" size={24} />
-                    <span className="text-sm text-slate-500">
-                      Click to upload photos
+                {/* Compact Image Upload */}
+                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/50">
+                  <div className="flex items-center justify-between">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-blue-500">
+                      <Upload size={16} />
+                      <span>Upload Photos (Max 3)</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={handleImageUpload}
+                        className="hidden"
+                        disabled={formik.values.images.length >= 3}
+                      />
+                    </label>
+                    <span className="text-[10px] text-slate-400">
+                      {formik.values.images.length}/3
                     </span>
-                  </label>
-                </div>
-                {formik.values.images.length > 0 && (
-                  <div className="mt-3 flex gap-2">
-                    {formik.values.images.map((img: string, idx: number) => (
-                      <div
-                        key={idx}
-                        className="relative h-16 w-16 overflow-hidden rounded-lg border border-slate-200"
-                      >
-                        <img
-                          src={img}
-                          alt={`preview-${idx}`}
-                          className="h-full w-full object-cover"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => removeImage(idx)}
-                          className="absolute right-0 top-0 flex h-5 w-5 items-center justify-center rounded-bl-lg bg-red-500 text-white hover:bg-red-600"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ))}
                   </div>
-                )}
+
+                  {/* Horizontal Preview Strip */}
+                  {formik.values.images.length > 0 && (
+                    <div className="mt-3 flex gap-2 overflow-x-auto">
+                      {formik.values.images.map((img: string, idx: number) => (
+                        <div
+                          key={idx}
+                          className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md border border-slate-200"
+                        >
+                          <img
+                            src={img}
+                            alt="preview"
+                            className="h-full w-full object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImage(idx)}
+                            className="absolute right-0 top-0 bg-red-500/80 p-0.5 text-white hover:bg-red-600"
+                          >
+                            <X size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
 
-          {/* RIGHT COLUMN */}
-          <div className="space-y-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-zinc-900 md:p-8">
-            <h3 className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-white">
-              <MapPin className="text-blue-500" size={20} /> Location & Time
-            </h3>
+          {/* RIGHT COLUMN (Narrower): Location, Time & Submit */}
+          <div className="md:col-span-5 space-y-5">
+            <div className="rounded-2xl bg-white p-5 shadow-sm border border-slate-100 dark:bg-zinc-900 dark:border-zinc-800 h-full flex flex-col">
+              <h3 className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <MapPin size={16} /> Where & When
+              </h3>
 
-            <div className="space-y-4">
-              <div>
-                <label className="mb-2 block text-small font-medium text-foreground-500 after:content-['*'] after:ml-0.5 after:text-red-500">
-                  Select Location
-                </label>
-                <div className="grid gap-3">
+              <div className="space-y-4 flex-1">
+                {/* Compact Location Cards */}
+                <div className="grid gap-2">
                   {LOCATIONS.map((loc) => (
                     <div
                       key={loc.id}
                       onClick={() => formik.setFieldValue("location", loc.id)}
                       className={clsx(
-                        "flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-all",
+                        "flex cursor-pointer items-center gap-3 rounded-lg border p-2.5 transition-all",
                         formik.values.location === loc.id
-                          ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500 dark:bg-blue-900/20"
-                          : "border-slate-200 hover:border-blue-300 dark:border-zinc-800"
+                          ? "border-blue-500 bg-blue-50 ring-1 ring-blue-500 dark:bg-blue-900/20 dark:border-blue-500"
+                          : "border-slate-200 hover:bg-slate-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
                       )}
                     >
                       <MapPin
-                        size={20}
+                        size={18}
                         className={
                           formik.values.location === loc.id
                             ? "text-blue-600"
@@ -439,7 +400,7 @@ export default function BookRepairPage() {
                         }
                       />
                       <div>
-                        <div className="font-semibold text-slate-900 dark:text-white">
+                        <div className="text-sm font-semibold text-slate-900 dark:text-white">
                           {loc.name}
                         </div>
                         <div className="text-xs text-slate-500">
@@ -450,69 +411,63 @@ export default function BookRepairPage() {
                   ))}
                 </div>
                 {formik.touched.location && formik.errors.location && (
-                  <div className="mt-1 text-xs text-danger">
+                  <p className="text-xs text-red-500">
                     {formik.errors.location}
+                  </p>
+                )}
+
+                {/* Date & Time Grid */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      min={defaultDate}
+                      {...formik.getFieldProps("date")}
+                      className="w-full rounded-lg border border-slate-200 bg-transparent px-2 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:text-white"
+                    />
                   </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-slate-500">
+                      Time (8am-8pm)
+                    </label>
+                    <input
+                      type="time"
+                      min="08:00"
+                      max="20:00"
+                      {...formik.getFieldProps("time")}
+                      className="w-full rounded-lg border border-slate-200 bg-transparent px-2 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:text-white"
+                    />
+                  </div>
+                </div>
+                {(formik.errors.date || formik.errors.time) && (
+                  <p className="text-xs text-red-500">Invalid Date or Time</p>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-2 block text-small font-medium text-foreground-500 flex items-center gap-1 after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Calendar size={14} /> Date
-                  </label>
-                  <input
-                    type="date"
-                    min={defaultDate}
-                    {...formik.getFieldProps("date")}
-                    className="w-full rounded-xl border-slate-200 bg-slate-50 p-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  {formik.touched.date && formik.errors.date && (
-                    <div className="mt-1 text-xs text-danger">
-                      {formik.errors.date}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <label className="mb-2 block text-small font-medium text-foreground-500 flex items-center gap-1 after:content-['*'] after:ml-0.5 after:text-red-500">
-                    <Clock size={14} /> Time (8AM - 8PM)
-                  </label>
-                  <input
-                    type="time"
-                    min="08:00"
-                    max="20:00"
-                    {...formik.getFieldProps("time")}
-                    className="w-full rounded-xl border-slate-200 bg-slate-50 p-2.5 text-sm dark:border-zinc-700 dark:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  {formik.touched.time && formik.errors.time && (
-                    <div className="mt-1 text-xs text-danger">
-                      {formik.errors.time}
-                    </div>
-                  )}
-                </div>
+              {/* Submit Area */}
+              <div className="mt-6 pt-4 border-t border-slate-100 dark:border-zinc-800">
+                {submitError && (
+                  <div className="mb-3 rounded-md bg-red-50 p-2 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                    {submitError}
+                  </div>
+                )}
+                <Button
+                  type="submit"
+                  className="w-full font-bold"
+                  color="primary"
+                  variant="solid"
+                  size="lg"
+                  isLoading={isSubmitting}
+                >
+                  {isSubmitting ? "Processing..." : "Confirm Booking"}
+                </Button>
+                <p className="mt-2 text-center text-[10px] text-slate-400">
+                  By clicking confirm, you agree to our Terms.
+                </p>
               </div>
-            </div>
-
-            <div className="mt-8 pt-4 border-t border-slate-100 dark:border-zinc-800">
-              {submitError && (
-                <div className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-600 dark:bg-red-900/20 dark:text-red-400">
-                  {submitError}
-                </div>
-              )}
-
-              <Button
-                type="submit"
-                className="w-full font-bold shadow-lg shadow-blue-500/30"
-                color="primary"
-                variant="solid"
-                size="lg"
-                isLoading={isSubmitting}
-              >
-                {isSubmitting ? "Booking..." : "Confirm Booking"}
-              </Button>
-              <p className="mt-3 text-center text-xs text-slate-400">
-                By booking, you agree to our Terms of Service.
-              </p>
             </div>
           </div>
         </form>
