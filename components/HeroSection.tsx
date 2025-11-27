@@ -34,7 +34,11 @@ const textItemVariants = {
 export default function HeroSection() {
   return (
     <motion.section
-      className="relative min-h-screen flex flex-col justify-center bg-background overflow-hidden"
+      // UPDATED:
+      // 1. 'min-h-screen': Forces section to be at least the height of the screen on ALL devices.
+      // 2. 'justify-center': Vertically centers the content.
+      // 3. 'pt-16': Adds a little padding top to account for the fixed navbar visually.
+      className="relative min-h-screen flex flex-col justify-center bg-background overflow-hidden pt-16 lg:pt-0"
       variants={sectionVariants}
       initial="hidden"
       animate="visible"
@@ -50,9 +54,10 @@ export default function HeroSection() {
       </div>
 
       <div className="relative mx-auto w-full max-w-6xl px-4 md:px-6 z-10">
-        <div className="flex w-full flex-col lg:flex-row lg:items-center justify-between min-h-[600px]">
+        {/* 'lg:min-h-[600px]': Keeps the desktop height consistency */}
+        <div className="flex w-full flex-col lg:flex-row lg:items-center justify-between lg:min-h-[600px]">
           <motion.div
-            className="flex-1 space-y-6 py-10 lg:py-0 max-w-2xl z-20"
+            className="flex-1 space-y-6 max-w-2xl z-20 flex flex-col items-center text-center lg:items-start lg:text-left mx-auto lg:mx-0"
             variants={leftColVariants}
           >
             <motion.div className="space-y-3" variants={textItemVariants}>
@@ -78,7 +83,7 @@ export default function HeroSection() {
             </motion.p>
 
             <motion.div
-              className="flex flex-wrap gap-4"
+              className="flex flex-wrap gap-4 justify-center lg:justify-start"
               variants={textItemVariants}
             >
               <Button
@@ -91,7 +96,6 @@ export default function HeroSection() {
                 Book a Repair
               </Button>
 
-              {/* UPDATED BUTTON HERE */}
               <Button
                 as={Link}
                 href="/track-repair"
@@ -104,7 +108,7 @@ export default function HeroSection() {
             </motion.div>
 
             <motion.div
-              className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs md:text-sm opacity-75"
+              className="flex flex-wrap items-center justify-center lg:justify-start gap-x-4 gap-y-2 text-xs md:text-sm opacity-75"
               variants={textItemVariants}
             >
               <div className="flex items-center gap-2">

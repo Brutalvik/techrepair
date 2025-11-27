@@ -34,7 +34,7 @@ import {
 const LOCATIONS = [
   {
     id: "downtown",
-    name: "Downtown Hub", // Shortened name for compact UI
+    name: "Downtown Hub",
     address: "123 Main St",
   },
   {
@@ -49,7 +49,7 @@ const DEVICE_TYPES = [
   "Laptop",
   "Tablet",
   "Console",
-  "Watch", // Shortened
+  "Watch",
   "Other",
 ];
 
@@ -218,7 +218,8 @@ export default function BookRepairPage() {
   }
 
   return (
-    <section className="min-h-screen w-full bg-slate-50 py-8 px-4 md:py-12 dark:bg-black">
+    // CHANGED: Added 'pt-24' (top padding) to ensure content starts below the fixed navbar
+    <section className="min-h-screen w-full bg-slate-50 px-4 pt-24 pb-12 dark:bg-black">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white md:text-3xl">
