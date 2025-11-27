@@ -16,6 +16,7 @@ import {
   Mail,
   Phone,
   FileText,
+  Copy,
 } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Input, Textarea } from "@heroui/input";
@@ -23,7 +24,7 @@ import clsx from "clsx";
 
 // --- REDUX IMPORTS ---
 import { useDispatch, useSelector } from "react-redux";
-import { RootState } from "@/store"; // Adjust path if needed
+import { RootState } from "@/store";
 import {
   updateBookingField,
   resetBooking,
@@ -84,6 +85,8 @@ export default function BookRepairPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  // New state to hold the ID for display
+  const [confirmedTrackingId, setConfirmedTrackingId] = useState("");
 
   // 2. Default Dates (Memoized)
   const { defaultDate, defaultTime } = useMemo(() => {
@@ -99,9 +102,8 @@ export default function BookRepairPage() {
   }, []);
 
   // 3. Initialize Formik with REDUX State
-  // If Redux has data (from session), use it. Otherwise use defaults.
   const formik = useFormik({
-    enableReinitialize: true, // Allows form to update if Redux state changes externally
+    enableReinitialize: true,
     initialValues: {
       customerName: bookingState.customerName || "",
       email: bookingState.email || "",
@@ -143,13 +145,16 @@ export default function BookRepairPage() {
           throw new Error(errData.error || "Failed to book repair");
         }
 
-        const data = await res.json(); // backend response includes trackingId
+        const data = await res.json();
+        // Expected response: { success: true, dbId: 1, trackingId: "TR-8339", ... }
 
         // Success Logic
         setSubmitSuccess(true);
+        // Save the specific string ID to show the user
+        setConfirmedTrackingId(data.trackingId);
 
-        // Save Tracking ID to Redux (optional, if you want to use it on next page)
-        if (data.dbId) dispatch(setTrackingId(data.dbId.toString()));
+        // Update Redux
+        if (data.trackingId) dispatch(setTrackingId(data.trackingId));
 
         // Clear the form data from Redux since it's submitted
         dispatch(resetBooking());
@@ -162,8 +167,7 @@ export default function BookRepairPage() {
     },
   });
 
-  // 4. Auto-Sync: Watch Formik values and update Redux
-  // This ensures session persistence as the user types
+  // 4. Auto-Sync
   useEffect(() => {
     dispatch(updateBookingField(formik.values));
   }, [formik.values, dispatch]);
@@ -181,7 +185,6 @@ export default function BookRepairPage() {
         reader.onloadend = () => {
           const newImages = [...formik.values.images, reader.result as string];
           formik.setFieldValue("images", newImages);
-          // Redux sync happens automatically via the useEffect above
         };
         reader.readAsDataURL(file);
       });
@@ -194,27 +197,47 @@ export default function BookRepairPage() {
     formik.setFieldValue("images", newImages);
   };
 
-  // Success View
+  // --- SUCCESS VIEW ---
   if (submitSuccess) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center px-4 text-center">
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="rounded-3xl bg-green-50 p-10 dark:bg-green-900/20"
+          className="max-w-md w-full rounded-3xl bg-green-50 p-10 dark:bg-green-900/20 shadow-xl"
         >
           <CheckCircle className="mx-auto h-20 w-20 text-green-500" />
           <h2 className="mt-6 text-3xl font-bold text-green-700 dark:text-green-400">
             Booking Confirmed!
           </h2>
           <p className="mt-2 text-lg text-slate-600 dark:text-slate-300">
-            We have received your request. Check your email for details.
+            We have received your request.
           </p>
+
+          {/* Tracking ID Display */}
+          <div className="mt-6 rounded-xl bg-white p-4 shadow-sm border border-green-100 dark:bg-black/40 dark:border-green-800">
+            <p className="text-sm text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">
+              Your Tracking ID
+            </p>
+            <div className="mt-1 flex items-center justify-center gap-2">
+              <span className="text-2xl font-mono font-bold text-slate-800 dark:text-white">
+                {confirmedTrackingId}
+              </span>
+            </div>
+          </div>
+          <p className="mt-2 text-sm text-slate-500">
+            Save this ID to track your repair status.
+          </p>
+
           <Button
-            className="mt-8 font-semibold"
-            color="success"
-            variant="flat"
-            onPress={() => setSubmitSuccess(false)}
+            className="mt-8 w-full font-bold"
+            color="primary"
+            variant="solid"
+            size="lg"
+            onPress={() => {
+              setSubmitSuccess(false);
+              setConfirmedTrackingId("");
+            }}
           >
             Book Another Repair
           </Button>
@@ -481,9 +504,9 @@ export default function BookRepairPage() {
                 type="submit"
                 className="w-full font-bold shadow-lg shadow-blue-500/30"
                 color="primary"
+                variant="solid"
                 size="lg"
                 isLoading={isSubmitting}
-                disabled={!formik.isValid || !formik.dirty}
               >
                 {isSubmitting ? "Booking..." : "Confirm Booking"}
               </Button>
