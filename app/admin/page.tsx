@@ -1,15 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
 import {
-  Package,
-  Clock,
-  CheckCircle,
-  Search,
   RefreshCw,
-  Smartphone,
-  MoreHorizontal,
+  Loader2, // Added Loader icon
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -59,8 +53,12 @@ export default function AdminDashboard() {
 
   // 2. Update Status Handler
   const handleStatusChange = async (id: number, newStatus: string) => {
-    setUpdatingId(id);
+    setUpdatingId(id); // Start loading spinner for this row
+
     try {
+      // Simulate a small delay if you want to see the spinner (optional, remove in prod)
+      // await new Promise(r => setTimeout(r, 500));
+
       const res = await fetch(
         `http://localhost:9000/api/admin/bookings/${id}/status`,
         {
@@ -81,7 +79,7 @@ export default function AdminDashboard() {
     } catch (err) {
       alert("Error updating status");
     } finally {
-      setUpdatingId(null);
+      setUpdatingId(null); // Stop loading spinner
     }
   };
 
@@ -104,7 +102,8 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-slate-50 px-4 py-12 dark:bg-black">
+    // Added 'mt-5' for the requested 20px margin push
+    <div className="min-h-screen w-full bg-slate-50 px-4 py-12 mt-5 dark:bg-black">
       <div className="mx-auto max-w-6xl">
         <div className="mb-8 flex items-center justify-between">
           <div>
@@ -172,24 +171,34 @@ export default function AdminDashboard() {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="relative">
-                        <select
-                          disabled={updatingId === booking.id}
-                          value={booking.status}
-                          onChange={(e) =>
-                            handleStatusChange(booking.id, e.target.value)
-                          }
-                          className={clsx(
-                            "cursor-pointer rounded-lg border border-slate-200 bg-white py-1.5 pl-3 pr-8 text-xs font-semibold shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white",
-                            updatingId === booking.id && "opacity-50"
-                          )}
-                        >
-                          {STATUS_OPTIONS.map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
+                      <div className="relative min-w-[140px]">
+                        {/* If this specific row is updating, show Spinner.
+                           Otherwise, show the Select dropdown.
+                        */}
+                        {updatingId === booking.id ? (
+                          <div className="flex items-center gap-2 py-1.5 pl-3 text-blue-600">
+                            <Loader2 className="animate-spin" size={16} />
+                            <span className="text-xs font-medium">
+                              Updating...
+                            </span>
+                          </div>
+                        ) : (
+                          <select
+                            value={booking.status}
+                            onChange={(e) =>
+                              handleStatusChange(booking.id, e.target.value)
+                            }
+                            className={clsx(
+                              "cursor-pointer w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-3 pr-8 text-xs font-semibold shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                            )}
+                          >
+                            {STATUS_OPTIONS.map((opt) => (
+                              <option key={opt} value={opt}>
+                                {opt}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </div>
                     </td>
                   </tr>
