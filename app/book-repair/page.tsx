@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
 import { motion } from "framer-motion";
@@ -10,7 +10,6 @@ import {
   MapPin,
   Upload,
   X,
-  Loader2,
   CheckCircle,
   Smartphone,
   User,
@@ -20,8 +19,16 @@ import {
 } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Input, Textarea } from "@heroui/input";
-import { Select, SelectItem } from "@heroui/select";
 import clsx from "clsx";
+
+// --- REDUX IMPORTS ---
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@/store"; // Adjust path if needed
+import {
+  updateBookingField,
+  resetBooking,
+  setTrackingId,
+} from "@/store/slices/bookingSlice";
 
 // --- CONFIG ---
 const LOCATIONS = [
@@ -46,65 +53,65 @@ const DEVICE_TYPES = [
   "Other",
 ];
 
-// --- VALIDATION SCHEMA ---
+// --- VALIDATION ---
 const BookingSchema = Yup.object().shape({
   customerName: Yup.string().min(2, "Too short").required("Name is required"),
   email: Yup.string().email("Invalid email").required("Email is required"),
   phone: Yup.string()
-    .matches(/^[0-9+\-\s()]*$/, "Invalid phone number")
     .min(10, "Phone number too short")
     .required("Phone is required"),
   deviceType: Yup.string().required("Please select a device"),
   location: Yup.string().required("Please select a service location"),
   issueDescription: Yup.string()
-    .min(10, "Please describe the issue in more detail")
-    .required("Issue description is required"),
+    .min(10, "Describe issue in detail")
+    .required("Description required"),
   date: Yup.string().required("Date is required"),
   time: Yup.string()
     .required("Time is required")
-    .test("is-business-hours", "We are open from 8am to 8pm", (value) => {
-      if (!value) return false;
-      const [hours] = value.split(":").map(Number);
-      return hours >= 8 && hours <= 20;
+    .test("is-business-hours", "Open 8am-8pm", (val) => {
+      if (!val) return false;
+      const [h] = val.split(":").map(Number);
+      return h >= 8 && h <= 20;
     }),
-  images: Yup.array().max(3, "Maximum 3 images allowed"),
+  images: Yup.array().max(3, "Max 3 images"),
 });
 
 export default function BookRepairPage() {
+  // 1. Redux Hooks
+  const dispatch = useDispatch();
+  const bookingState = useSelector((state: RootState) => state.booking);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
-  // Calculate default values
+  // 2. Default Dates (Memoized)
   const { defaultDate, defaultTime } = useMemo(() => {
     const now = new Date();
-
-    // Default Date: Today (Local YYYY-MM-DD)
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const day = String(now.getDate()).padStart(2, "0");
     const dateStr = `${year}-${month}-${day}`;
-
-    // Default Time: Now + 2 hours (HH:mm)
     now.setHours(now.getHours() + 2);
     const hours = String(now.getHours()).padStart(2, "0");
     const minutes = String(now.getMinutes()).padStart(2, "0");
-    const timeStr = `${hours}:${minutes}`;
-
-    return { defaultDate: dateStr, defaultTime: timeStr };
+    return { defaultDate: dateStr, defaultTime: `${hours}:${minutes}` };
   }, []);
 
+  // 3. Initialize Formik with REDUX State
+  // If Redux has data (from session), use it. Otherwise use defaults.
   const formik = useFormik({
+    enableReinitialize: true, // Allows form to update if Redux state changes externally
     initialValues: {
-      customerName: "",
-      email: "",
-      phone: "",
-      deviceType: "",
-      location: "",
-      issueDescription: "",
-      date: defaultDate, // Default: Today
-      time: defaultTime, // Default: Now + 2h
-      images: [] as string[], // Base64 strings
+      customerName: bookingState.customerName || "",
+      email: bookingState.email || "",
+      phone: bookingState.phone || "",
+      deviceType: bookingState.deviceType || "",
+      location: bookingState.location || "",
+      issueDescription: bookingState.issueDescription || "",
+      date: bookingState.date || defaultDate,
+      time: bookingState.time || defaultTime,
+      images: bookingState.images || [],
     },
     validationSchema: BookingSchema,
     onSubmit: async (values) => {
@@ -112,18 +119,17 @@ export default function BookRepairPage() {
       setSubmitError("");
 
       try {
-        // Construct payload for backend
         const payload = {
           customerName: values.customerName,
           email: values.email,
           phone: values.phone,
           deviceType: values.deviceType,
           issueDescription: values.issueDescription,
-          serviceType: "Drop-off", // Since user selected a location
+          serviceType: "Drop-off",
           address: LOCATIONS.find((l) => l.id === values.location)?.address,
           bookingDate: values.date,
           bookingTime: values.time,
-          images: values.images, // Sending base64 images
+          images: values.images,
         };
 
         const res = await fetch("http://localhost:9000/api/bookings", {
@@ -137,14 +143,17 @@ export default function BookRepairPage() {
           throw new Error(errData.error || "Failed to book repair");
         }
 
+        const data = await res.json(); // backend response includes trackingId
+
+        // Success Logic
         setSubmitSuccess(true);
-        formik.resetForm({
-          values: {
-            ...formik.initialValues,
-            date: defaultDate,
-            time: defaultTime,
-          },
-        });
+
+        // Save Tracking ID to Redux (optional, if you want to use it on next page)
+        if (data.dbId) dispatch(setTrackingId(data.dbId.toString()));
+
+        // Clear the form data from Redux since it's submitted
+        dispatch(resetBooking());
+        formik.resetForm();
       } catch (err: any) {
         setSubmitError(err.message);
       } finally {
@@ -153,22 +162,26 @@ export default function BookRepairPage() {
     },
   });
 
-  // Handle Image Upload (Convert to Base64)
+  // 4. Auto-Sync: Watch Formik values and update Redux
+  // This ensures session persistence as the user types
+  useEffect(() => {
+    dispatch(updateBookingField(formik.values));
+  }, [formik.values, dispatch]);
+
+  // Image Handlers
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
       if (formik.values.images.length + files.length > 3) {
-        alert("You can only upload a maximum of 3 images.");
+        alert("Max 3 images allowed.");
         return;
       }
-
       files.forEach((file) => {
         const reader = new FileReader();
         reader.onloadend = () => {
-          formik.setFieldValue("images", [
-            ...formik.values.images,
-            reader.result as string,
-          ]);
+          const newImages = [...formik.values.images, reader.result as string];
+          formik.setFieldValue("images", newImages);
+          // Redux sync happens automatically via the useEffect above
         };
         reader.readAsDataURL(file);
       });
@@ -226,7 +239,7 @@ export default function BookRepairPage() {
           onSubmit={formik.handleSubmit}
           className="grid gap-8 md:grid-cols-2"
         >
-          {/* LEFT COLUMN: Customer & Device Info */}
+          {/* LEFT COLUMN */}
           <div className="space-y-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-zinc-900 md:p-8">
             <h3 className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-white">
               <User className="text-blue-500" size={20} /> Personal Details
@@ -302,7 +315,7 @@ export default function BookRepairPage() {
 
               <Textarea
                 label="Issue Description"
-                placeholder="Describe the problem (e.g., cracked screen, battery drains fast)..."
+                placeholder="Describe the problem..."
                 minRows={3}
                 startContent={
                   <FileText size={16} className="mt-1 text-slate-400" />
@@ -319,7 +332,7 @@ export default function BookRepairPage() {
                 isRequired
               />
 
-              {/* Image Upload */}
+              {/* Images */}
               <div>
                 <label className="mb-2 block text-small font-medium text-foreground-500">
                   Upload Images (Max 3)
@@ -344,8 +357,6 @@ export default function BookRepairPage() {
                     </span>
                   </label>
                 </div>
-
-                {/* Image Previews */}
                 {formik.values.images.length > 0 && (
                   <div className="mt-3 flex gap-2">
                     {formik.values.images.map((img: string, idx: number) => (
@@ -362,7 +373,6 @@ export default function BookRepairPage() {
                           type="button"
                           onClick={() => removeImage(idx)}
                           className="absolute right-0 top-0 flex h-5 w-5 items-center justify-center rounded-bl-lg bg-red-500 text-white hover:bg-red-600"
-                          aria-label={`Remove image ${idx + 1}`}
                         >
                           <X size={12} />
                         </button>
@@ -374,7 +384,7 @@ export default function BookRepairPage() {
             </div>
           </div>
 
-          {/* RIGHT COLUMN: Location & Time */}
+          {/* RIGHT COLUMN */}
           <div className="space-y-6 rounded-2xl bg-white p-6 shadow-sm dark:bg-zinc-900 md:p-8">
             <h3 className="flex items-center gap-2 text-xl font-semibold text-slate-900 dark:text-white">
               <MapPin className="text-blue-500" size={20} /> Location & Time
