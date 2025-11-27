@@ -10,7 +10,8 @@ import {
   REGISTER,
 } from "redux-persist";
 import storageSession from "redux-persist/lib/storage/session";
-import bookingReducer from "./slices/bookingSlice";
+import bookingReducer from "@/store/slices/bookingSlice";
+import chatReducer from "@/store/slices/chatSlice";
 
 // 1. Persist Configuration
 const persistConfig = {
@@ -25,6 +26,7 @@ const persistedReducer = persistReducer(persistConfig, bookingReducer);
 export const store = configureStore({
   reducer: {
     booking: persistedReducer,
+    chat: chatReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
