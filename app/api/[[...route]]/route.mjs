@@ -55,21 +55,22 @@ const executeFastifyRequest = async (req, method) => {
   const app = await FASTIFY_APP_PROMISE; // Wait for initialization
 
   // 1. Get the raw path from Vercel's Request object
+  // Note: req.url includes the domain and path segment from the Vercel invocation
   const url = new URL(req.url);
 
-  // 2. CRITICAL PATH CLEANUP:
-  // Fastify needs '/api/bookings' but req.url might be 'https://domain/api/bookings'
-  // We keep the full path because the routes were registered with '/api' prefix.
-  const path = url.pathname;
+  // 2. CRITICAL PATH CLEANUP: Get the path Fastify expects (e.g., /api/admin/bookings)
+  const path = url.pathname + url.search; // Include search params in the URL
+
+  // Normalize Headers to a simple object for Fastify injection
+  const headers = Object.fromEntries(req.headers.entries());
 
   let body = undefined;
   if (method === "POST" || method === "PATCH") {
     try {
-      // Need to clone the request stream to read the body only once
+      // Read the body for POST/PATCH. Use req.clone() as the stream might be consumed elsewhere.
       body = await req.clone().json();
     } catch (e) {
-      // Log this but proceed, let Fastify's router validate the body structure
-      console.warn("Could not parse request body for injection.");
+      // If body parsing fails (e.g., empty body), pass empty object
       body = {};
     }
   }
@@ -78,9 +79,9 @@ const executeFastifyRequest = async (req, method) => {
     app.inject(
       {
         method: method,
-        url: path, // Use the full path
-        headers: Object.fromEntries(req.headers.entries()),
-        payload: body ? JSON.stringify(body) : undefined,
+        url: path,
+        headers: headers, // Pass all headers
+        payload: body ? JSON.stringify(body) : undefined, // Stringify payload if present
       },
       (err, response) => {
         if (err) {
@@ -112,7 +113,6 @@ const executeFastifyRequest = async (req, method) => {
 };
 
 // --- EXPORTED HANDLERS ---
-// We define individual handlers to ensure Vercel's router works correctly.
 
 export async function GET(req) {
   return executeFastifyRequest(req, "GET");
@@ -126,7 +126,6 @@ export async function PATCH(req) {
   return executeFastifyRequest(req, "PATCH");
 }
 
-// Add OPTIONS handler required for Preflight checks (CORS)
 export async function OPTIONS(req) {
   return executeFastifyRequest(req, "OPTIONS");
 }
