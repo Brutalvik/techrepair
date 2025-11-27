@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession, signIn, signOut } from "next-auth/react"; // <--- AUTH IMPORTS
 import {
   RefreshCw,
-  Loader2, // Added Loader icon
+  Loader2,
+  LogOut,
+  ShieldAlert,
+  LayoutDashboard,
 } from "lucide-react";
+import { Button } from "@heroui/button"; // Assuming you have this
 import clsx from "clsx";
 
 // Type definition for our booking data
@@ -27,11 +32,12 @@ const STATUS_OPTIONS = [
 ];
 
 export default function AdminDashboard() {
+  const { data: session, status } = useSession(); // <--- AUTH HOOK
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
 
-  // 1. Fetch Bookings
+  // 1. Fetch Bookings (Only if authenticated)
   const fetchBookings = async () => {
     setLoading(true);
     try {
@@ -48,17 +54,15 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    fetchBookings();
-  }, []);
+    if (status === "authenticated") {
+      fetchBookings();
+    }
+  }, [status]);
 
   // 2. Update Status Handler
   const handleStatusChange = async (id: number, newStatus: string) => {
-    setUpdatingId(id); // Start loading spinner for this row
-
+    setUpdatingId(id);
     try {
-      // Simulate a small delay if you want to see the spinner (optional, remove in prod)
-      // await new Promise(r => setTimeout(r, 500));
-
       const res = await fetch(
         `http://localhost:9000/api/admin/bookings/${id}/status`,
         {
@@ -69,7 +73,6 @@ export default function AdminDashboard() {
       );
 
       if (res.ok) {
-        // Update local state to reflect change immediately
         setBookings((prev) =>
           prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b))
         );
@@ -79,11 +82,10 @@ export default function AdminDashboard() {
     } catch (err) {
       alert("Error updating status");
     } finally {
-      setUpdatingId(null); // Stop loading spinner
+      setUpdatingId(null);
     }
   };
 
-  // Helper for Status Badge Color
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Booked":
@@ -101,29 +103,93 @@ export default function AdminDashboard() {
     }
   };
 
+  // --- AUTH STATES ---
+
+  // A. Loading State (Checking if logged in)
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-black">
+        <Loader2 className="animate-spin text-blue-500" size={40} />
+      </div>
+    );
+  }
+
+  // B. Access Denied / Login Screen
+  if (status === "unauthenticated") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 dark:bg-black">
+        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl dark:bg-zinc-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+            <ShieldAlert
+              className="text-blue-600 dark:text-blue-400"
+              size={32}
+            />
+          </div>
+          <h1 className="mb-2 text-2xl font-bold text-slate-900 dark:text-white">
+            Admin Access Only
+          </h1>
+          <p className="mb-8 text-slate-500 dark:text-slate-400">
+            You must be an authorized administrator to view this dashboard.
+          </p>
+
+          <Button
+            className="w-full font-bold"
+            color="primary"
+            size="lg"
+            onPress={() => signIn("google")}
+          >
+            Sign in with Google
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // C. Dashboard (Authenticated)
   return (
-    // Added 'mt-5' for the requested 20px margin push
     <div className="min-h-screen w-full bg-slate-50 px-4 py-12 mt-5 dark:bg-black">
       <div className="mx-auto max-w-6xl">
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-              Admin Dashboard
-            </h1>
-            <p className="text-slate-500 dark:text-slate-400">
-              Manage repair orders
-            </p>
+        {/* HEADER */}
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center gap-3">
+            {/* Show Google Profile Pic if available */}
+            {session?.user?.image && (
+              <img
+                src={session.user.image}
+                alt="Profile"
+                className="h-10 w-10 rounded-full border border-slate-200"
+              />
+            )}
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
+                Admin Dashboard
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Logged in as {session?.user?.email}
+              </p>
+            </div>
           </div>
-          <button
-            onClick={fetchBookings}
-            className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold shadow-sm transition-colors hover:bg-slate-50 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
-          >
-            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-            Refresh
-          </button>
+
+          <div className="flex gap-2">
+            <button
+              onClick={fetchBookings}
+              className="flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-semibold shadow-sm transition-colors hover:bg-slate-50 dark:bg-zinc-900 dark:text-white dark:hover:bg-zinc-800"
+            >
+              <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+              Refresh
+            </button>
+
+            <button
+              onClick={() => signOut()}
+              className="flex items-center gap-2 rounded-lg bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 shadow-sm transition-colors hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400"
+            >
+              <LogOut size={16} />
+              Sign Out
+            </button>
+          </div>
         </div>
 
-        {/* Table Container */}
+        {/* TABLE */}
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
@@ -172,9 +238,6 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="relative min-w-[140px]">
-                        {/* If this specific row is updating, show Spinner.
-                           Otherwise, show the Select dropdown.
-                        */}
                         {updatingId === booking.id ? (
                           <div className="flex items-center gap-2 py-1.5 pl-3 text-blue-600">
                             <Loader2 className="animate-spin" size={16} />

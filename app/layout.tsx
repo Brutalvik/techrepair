@@ -9,7 +9,8 @@ import { fontSans } from "@/config/fonts";
 import { Navbar } from "@/components/navbar";
 import FooterSection from "@/components/FooterSection";
 import { Chatbot } from "@/components/ChatBot";
-import { ReduxProvider } from "./ReduxProvider";
+import { ReduxProvider } from "@/app/ReduxProvider";
+import { SessionProvider } from "@/app/SessionProvider";
 
 export const metadata: Metadata = {
   title: {
@@ -44,18 +45,20 @@ export default function RootLayout({
         )}
       >
         <Providers themeProps={{ attribute: "class", defaultTheme: "dark" }}>
-          <ReduxProvider>
-            <div className="relative flex flex-col h-screen">
-              <Navbar />
-              {/* UPDATED: Removed "container mx-auto px-6" 
+          <SessionProvider>
+            <ReduxProvider>
+              <div className="relative flex flex-col h-screen">
+                <Navbar />
+                {/* UPDATED: Removed "container mx-auto px-6" 
                Added "w-full" so children can be full width 
             */}
-              <main className="w-full flex-grow">{children}</main>
+                <main className="w-full flex-grow">{children}</main>
 
-              <FooterSection />
-              <Chatbot />
-            </div>
-          </ReduxProvider>
+                <FooterSection />
+                <Chatbot />
+              </div>
+            </ReduxProvider>
+          </SessionProvider>
         </Providers>
       </body>
     </html>

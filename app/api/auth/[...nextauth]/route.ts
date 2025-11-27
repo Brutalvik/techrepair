@@ -11,14 +11,15 @@ const handler = NextAuth({
   callbacks: {
     async signIn({ user }) {
       const allowedEmails = process.env.ADMIN_EMAILS?.split(",") || [];
+
+      // Check if email is allowed
       if (
         user.email &&
         allowedEmails.map((e) => e.trim()).includes(user.email)
       ) {
-        return true; // Allow access
+        return true;
       }
 
-      // 3. Reject everyone else
       return false;
     },
   },
