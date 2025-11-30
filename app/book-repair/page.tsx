@@ -255,6 +255,7 @@ export default function BookRepairPage() {
                     errorMessage={
                       formik.touched.customerName && formik.errors.customerName
                     }
+                    startContent={<User size={16} className="text-slate-400" />}
                   />
                   <Input
                     label="Email"
@@ -263,6 +264,7 @@ export default function BookRepairPage() {
                     {...formik.getFieldProps("email")}
                     isInvalid={formik.touched.email && !!formik.errors.email}
                     errorMessage={formik.touched.email && formik.errors.email}
+                    startContent={<Mail size={16} className="text-slate-400" />}
                   />
                 </div>
                 <Input
@@ -272,6 +274,7 @@ export default function BookRepairPage() {
                   {...formik.getFieldProps("phone")}
                   isInvalid={formik.touched.phone && !!formik.errors.phone}
                   errorMessage={formik.touched.phone && formik.errors.phone}
+                  startContent={<Phone size={16} className="text-slate-400" />}
                 />
               </div>
             </div>
