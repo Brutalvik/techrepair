@@ -28,6 +28,7 @@ import {
   resetBooking,
   setTrackingId,
 } from "@/store/slices/bookingSlice";
+import { API_BASE_URL } from "@/config/api-config";
 
 // --- CONFIG ---
 const LOCATIONS = [
@@ -120,7 +121,7 @@ export default function BookRepairPage() {
         };
 
         // Frontend URL should be correct based on the last fix (local:9000)
-        const res = await fetch("http://localhost:9000/api/bookings", {
+        const res = await fetch(`${API_BASE_URL}/api/bookings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

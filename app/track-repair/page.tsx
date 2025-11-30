@@ -13,6 +13,7 @@ import {
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import clsx from "clsx";
+import { API_BASE_URL } from "@/config/api-config";
 
 // --- CONFIGURATION ---
 const STEPS = [
@@ -62,7 +63,7 @@ export default function TrackRepairPage() {
     setTrackingId(finalId);
 
     try {
-      const res = await fetch(`http://localhost:9000/api/bookings/${finalId}`);
+      const res = await fetch(`${API_BASE_URL}/api/bookings/${finalId}`);
       if (!res.ok) throw new Error("Repair not found. Please check your ID.");
       const data = await res.json();
       setRepairData(data);

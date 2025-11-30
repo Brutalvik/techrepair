@@ -31,6 +31,7 @@ import {
   useDisclosure,
 } from "@heroui/modal";
 import clsx from "clsx";
+import { API_BASE_URL } from "@/config/api-config";
 
 // Type definition
 type Booking = {
@@ -83,13 +84,13 @@ export default function AdminDashboard() {
 
       if (query) {
         // GLOBAL SEARCH: Hitting the main endpoint which now does UNION search
-        url = `http://localhost:9000/api/admin/bookings?q=${encodeURIComponent(query)}`;
+        url = `${API_BASE_URL}/api/admin/bookings?q=${encodeURIComponent(query)}`;
       } else {
         // NO SEARCH: Use tabs to decide endpoint
         url =
           viewMode === "active"
-            ? "http://localhost:9000/api/admin/bookings"
-            : "http://localhost:9000/api/admin/archived-bookings";
+            ? `${API_BASE_URL}/api/admin/bookings`
+            : `${API_BASE_URL}/api/admin/archived-bookings`;
       }
 
       const res = await fetch(url);
@@ -141,7 +142,7 @@ export default function AdminDashboard() {
 
     try {
       const res = await fetch(
-        `http://localhost:9000/api/admin/bookings/${bookingToArchive}/archive`,
+        `${API_BASE_URL}/api/admin/bookings/${bookingToArchive}/archive`,
         {
           method: "POST",
         }
@@ -164,7 +165,7 @@ export default function AdminDashboard() {
     setUpdatingId(id);
     try {
       const res = await fetch(
-        `http://localhost:9000/api/admin/bookings/${id}/status`,
+        `${API_BASE_URL}/api/admin/bookings/${id}/status`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
