@@ -13,9 +13,6 @@ import {
   User,
   Mail,
   Phone,
-  FileText,
-  Calendar,
-  Clock,
 } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Input, Textarea } from "@heroui/input";
@@ -29,6 +26,7 @@ import {
   setTrackingId,
 } from "@/store/slices/bookingSlice";
 import { API_BASE_URL } from "@/config/api-config";
+import { useRouter } from "next/navigation";
 
 // --- CONFIG ---
 const LOCATIONS = [
@@ -66,6 +64,7 @@ const BookingSchema = Yup.object().shape({
 
 export default function BookRepairPage() {
   const dispatch = useDispatch();
+  const router = useRouter();
   const bookingState = useSelector((state: RootState) => state.booking);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -221,6 +220,14 @@ export default function BookRepairPage() {
             }}
           >
             Book Another
+          </Button>
+          <Button
+            className="mt-6 w-full font-semibold"
+            color="primary"
+            variant="flat"
+            onPress={() => router.push("/")}
+          >
+            Go to Home
           </Button>
         </motion.div>
       </div>
