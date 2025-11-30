@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import {
   RefreshCw,
@@ -19,6 +19,8 @@ import {
   AlertTriangle,
   History,
   LayoutList,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
@@ -47,6 +49,13 @@ type Booking = {
   archived_at?: string | null; // Can be null for active items
 };
 
+type APIResponse = {
+  total: number;
+  limit: number;
+  offset: number;
+  data: Booking[];
+};
+
 type SortConfig = {
   key: keyof Booking | null;
   direction: "asc" | "desc";
@@ -60,11 +69,19 @@ const STATUS_OPTIONS = [
   "Completed",
 ];
 
+const RECORDS_PER_PAGE_OPTIONS = [10, 20, 50, 100];
+
 export default function AdminDashboard() {
   const { data: session, status: authStatus } = useSession();
   const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
 
+  // --- PAGINATION STATE ---
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [limit, setLimit] = useState(20); // Default limit is 20, matching backend
+  const [currentPage, setCurrentPage] = useState(1);
+  // --- END PAGINATION STATE ---
+
   const [loadingData, setLoadingData] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -76,56 +93,107 @@ export default function AdminDashboard() {
     direction: "desc",
   });
 
+  // Calculate total pages and pagination display info
+  const totalPages = Math.ceil(totalCount / limit);
+  const startRange = totalCount === 0 ? 0 : (currentPage - 1) * limit + 1;
+  const endRange = Math.min(currentPage * limit, totalCount);
+  const isFirstPage = currentPage === 1;
+  const isLastPage = currentPage === totalPages || totalCount === 0;
+
   // 1. Fetch Bookings Logic
-  const fetchBookings = async (query = "") => {
-    setLoadingData(true);
-    try {
-      let url = "";
+  const fetchBookings = useCallback(
+    async (query: string, page: number, recLimit: number) => {
+      setLoadingData(true);
+      const offset = (page - 1) * recLimit;
 
-      if (query) {
-        // GLOBAL SEARCH: Hitting the main endpoint which now does UNION search
-        url = `${API_BASE_URL}/api/admin/bookings?q=${encodeURIComponent(query)}`;
-      } else {
-        // NO SEARCH: Use tabs to decide endpoint
-        url =
-          viewMode === "active"
-            ? `${API_BASE_URL}/api/admin/bookings`
-            : `${API_BASE_URL}/api/admin/archived-bookings`;
-      }
+      try {
+        let url = "";
 
-      const res = await fetch(url);
-      if (res.ok) {
-        const data = await res.json();
-        setBookings(data);
+        if (query) {
+          // GLOBAL SEARCH: Hitting the main endpoint for search
+          url = `${API_BASE_URL}/api/admin/bookings?q=${encodeURIComponent(
+            query
+          )}&limit=${recLimit}&offset=${offset}`;
+        } else {
+          // NO SEARCH: Use tabs to decide endpoint
+          url =
+            viewMode === "active"
+              ? `${API_BASE_URL}/api/admin/bookings?limit=${recLimit}&offset=${offset}`
+              : `${API_BASE_URL}/api/admin/archived-bookings?limit=${recLimit}&offset=${offset}`;
+        }
+
+        const res = await fetch(url);
+        if (res.ok) {
+          const data: APIResponse = await res.json();
+          setBookings(data.data);
+          setTotalCount(data.total);
+          // Set currentPage to ensure it's in sync, especially when limit changes
+          // Note: data.limit and data.offset reflect the *actual* parameters used by the server
+        } else {
+          console.error("API call failed:", res.status, await res.text());
+        }
+      } catch (err) {
+        console.error("Failed to fetch bookings", err);
+        setTotalCount(0);
+        setBookings([]);
+      } finally {
+        setLoadingData(false);
       }
-    } catch (err) {
-      console.error("Failed to fetch bookings", err);
-    } finally {
-      setLoadingData(false);
+    },
+    [viewMode]
+  );
+
+  // Effect to trigger fetch on initial load, viewMode change, or limit change
+  useEffect(() => {
+    if (authStatus === "authenticated") {
+      // Always reset to page 1 when view mode or limit changes
+      setCurrentPage(1);
+      // Fetch data for the new context (page 1)
+      fetchBookings(searchQuery, 1, limit);
+    }
+  }, [authStatus, viewMode, limit]);
+
+  // Effect to re-fetch when page changes (only after initial load/context change)
+  useEffect(() => {
+    // This prevents double fetching on mount/context change since the above useEffect handles page 1
+    if (authStatus === "authenticated") {
+      fetchBookings(searchQuery, currentPage, limit);
+    }
+  }, [currentPage]);
+
+  // --- PAGINATION HANDLERS ---
+  const handlePageChange = (newPage: number) => {
+    if (newPage > 0 && newPage <= totalPages) {
+      setCurrentPage(newPage);
     }
   };
 
-  // Trigger fetch on auth, viewMode change, or manual search clear
-  useEffect(() => {
-    if (authStatus === "authenticated") {
-      // Only auto-fetch if we aren't holding a search query state
-      // (Preverves search results if user switches tabs accidentally)
-      if (!searchQuery) fetchBookings();
-    }
-  }, [authStatus, viewMode]);
+  const handleLimitChange = (newLimit: number) => {
+    // Reset to page 1 when limit changes
+    setLimit(newLimit);
+    setCurrentPage(1);
+    // Fetch is handled by useEffect[limit]
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    fetchBookings(searchQuery);
+    setCurrentPage(1); // Always reset to page 1 for a new search
+    fetchBookings(searchQuery, 1, limit);
   };
 
   const clearSearch = () => {
     setSearchQuery("");
-    fetchBookings(""); // This will fall back to the current viewMode logic
+    setCurrentPage(1); // Reset page on clear
+    fetchBookings("", 1, limit); // Fetch for current viewMode, page 1, new limit
   };
 
+  const handleRefresh = () => {
+    // Re-fetch data for the current search, page, and limit
+    fetchBookings(searchQuery, currentPage, limit);
+  };
+  // --- END PAGINATION HANDLERS ---
+
   // Helper: Determine if a row is archived based on DATA, not just viewMode
-  // This allows search results to mix active/archived correctly
   const isArchived = (booking: Booking) => {
     return !!booking.archived_at;
   };
@@ -149,7 +217,9 @@ export default function AdminDashboard() {
       );
 
       if (res.ok) {
-        setBookings((prev) => prev.filter((b) => b.id !== bookingToArchive));
+        // Re-fetch data after archiving to update list, count, and handle potential page shift
+        // Use the current search query and page, but let the fetch function handle the new count.
+        fetchBookings(searchQuery, currentPage, limit);
       } else {
         alert("Failed to archive");
       }
@@ -261,6 +331,7 @@ export default function AdminDashboard() {
     );
 
   if (authStatus === "unauthenticated") {
+    // ... (Unauthenticated content remains the same)
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 dark:bg-black">
         <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl dark:bg-zinc-900">
@@ -355,7 +426,7 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          {/* SEARCH */}
+          {/* SEARCH & REFRESH */}
           <div className="flex flex-col gap-2 sm:flex-row lg:items-center">
             <form onSubmit={handleSearch} className="relative w-full lg:w-80">
               <Input
@@ -378,7 +449,7 @@ export default function AdminDashboard() {
             </form>
             <div className="flex gap-2">
               <Button
-                onPress={() => fetchBookings(searchQuery)}
+                onPress={handleRefresh}
                 disabled={loadingData}
                 className="flex-1 sm:flex-none bg-white dark:bg-zinc-900"
                 variant="flat"
@@ -405,8 +476,9 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <>
-            {/* DESKTOP VIEW */}
+            {/* DESKTOP VIEW - Table remains the same */}
             <div className="hidden md:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+              {/* ... Table structure (thead, tbody) remains the same, using sortedBookings ... */}
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead className="bg-slate-50 text-slate-500 dark:bg-zinc-800/50 dark:text-slate-400">
@@ -583,7 +655,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* MOBILE VIEW */}
+            {/* MOBILE VIEW - Cards remain the same */}
             <div className="md:hidden space-y-3">
               {sortedBookings.map((booking) => (
                 <div
@@ -714,6 +786,98 @@ export default function AdminDashboard() {
                 No bookings found.
               </div>
             )}
+
+            {/* --- PAGINATION CONTROLS (NEW SECTION) --- */}
+            {totalCount > 0 && (
+              <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-slate-200 pt-4 dark:border-zinc-800 sm:flex-row">
+                {/* 1. Status Text & Limit Dropdown */}
+                <div className="flex items-center gap-4 text-sm text-slate-700 dark:text-slate-400">
+                  <span>
+                    Showing{" "}
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {startRange}-{endRange}
+                    </span>{" "}
+                    of{" "}
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {totalCount}
+                    </span>{" "}
+                    records
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500">Per page:</span>
+                    <select
+                      value={limit}
+                      onChange={(e) =>
+                        handleLimitChange(parseInt(e.target.value))
+                      }
+                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      {RECORDS_PER_PAGE_OPTIONS.map((opt) => (
+                        <option key={opt} value={opt}>
+                          {opt}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* 2. Page Navigation Controls */}
+                <div className="flex items-center gap-2">
+                  {/* Page Selector Dropdown */}
+                  {totalPages > 1 && (
+                    <div className="flex items-center gap-1.5 text-sm">
+                      <span className="text-slate-700 dark:text-slate-400">
+                        Page
+                      </span>
+                      <select
+                        value={currentPage}
+                        onChange={(e) =>
+                          handlePageChange(parseInt(e.target.value))
+                        }
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-semibold shadow-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-white focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        {Array.from(
+                          { length: totalPages },
+                          (_, i) => i + 1
+                        ).map((page) => (
+                          <option key={page} value={page}>
+                            {page}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-slate-700 dark:text-slate-400">
+                        of {totalPages}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Previous Button */}
+                  <Button
+                    onPress={() => handlePageChange(currentPage - 1)}
+                    disabled={isFirstPage || loadingData}
+                    size="sm"
+                    variant={isFirstPage ? "flat" : "solid"}
+                    className="h-8 w-16"
+                    startContent={<ChevronLeft size={16} />}
+                  >
+                    Prev
+                  </Button>
+
+                  {/* Next Button */}
+                  <Button
+                    onPress={() => handlePageChange(currentPage + 1)}
+                    disabled={isLastPage || loadingData}
+                    size="sm"
+                    variant={isLastPage ? "ghost" : "solid"}
+                    className="h-8 w-16"
+                    endContent={<ChevronRight />}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
+            {/* --- END PAGINATION CONTROLS --- */}
           </>
         )}
       </div>
