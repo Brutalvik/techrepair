@@ -83,13 +83,13 @@ export default function AdminDashboard() {
 
       if (query) {
         // GLOBAL SEARCH: Hitting the main endpoint which now does UNION search
-        url = `/api/admin/bookings?q=${encodeURIComponent(query)}`;
+        url = `http://localhost:9000/api/admin/bookings?q=${encodeURIComponent(query)}`;
       } else {
         // NO SEARCH: Use tabs to decide endpoint
         url =
           viewMode === "active"
-            ? "/api/admin/bookings"
-            : "/api/admin/archived-bookings";
+            ? "http://localhost:9000/api/admin/bookings"
+            : "http://localhost:9000/api/admin/archived-bookings";
       }
 
       const res = await fetch(url);
@@ -141,7 +141,7 @@ export default function AdminDashboard() {
 
     try {
       const res = await fetch(
-        `/api/admin/bookings/${bookingToArchive}/archive`,
+        `http://localhost:9000/api/admin/bookings/${bookingToArchive}/archive`,
         {
           method: "POST",
         }
@@ -163,11 +163,14 @@ export default function AdminDashboard() {
   const handleStatusChange = async (id: number, newStatus: string) => {
     setUpdatingId(id);
     try {
-      const res = await fetch(`/api/admin/bookings/${id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
-      });
+      const res = await fetch(
+        `http://localhost:9000/api/admin/bookings/${id}/status`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: newStatus }),
+        }
+      );
 
       if (res.ok) {
         const updatedRecord = await res.json();

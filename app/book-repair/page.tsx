@@ -5,8 +5,6 @@ import { useFormik } from "formik";
 import * as Yup from "yup";
 import { motion } from "framer-motion";
 import {
-  Calendar,
-  Clock,
   MapPin,
   Upload,
   X,
@@ -16,12 +14,13 @@ import {
   Mail,
   Phone,
   FileText,
+  Calendar,
+  Clock,
 } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Input, Textarea } from "@heroui/input";
 import clsx from "clsx";
 
-// --- REDUX IMPORTS ---
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store";
 import {
@@ -32,16 +31,8 @@ import {
 
 // --- CONFIG ---
 const LOCATIONS = [
-  {
-    id: "downtown",
-    name: "Downtown Hub",
-    address: "123 Main St",
-  },
-  {
-    id: "westside",
-    name: "Westside Center",
-    address: "456 West Ave",
-  },
+  { id: "downtown", name: "Downtown Hub", address: "123 Main St" },
+  { id: "westside", name: "Westside Center", address: "456 West Ave" },
 ];
 
 const DEVICE_TYPES = [
@@ -80,6 +71,9 @@ export default function BookRepairPage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [confirmedTrackingId, setConfirmedTrackingId] = useState("");
+
+  // FIX 1: State to control when the Redux sync useEffect is active
+  const [isSyncing, setIsSyncing] = useState(true);
 
   const { defaultDate, defaultTime } = useMemo(() => {
     const now = new Date();
@@ -125,7 +119,8 @@ export default function BookRepairPage() {
           images: values.images,
         };
 
-        const res = await fetch("/api/bookings", {
+        // Frontend URL should be correct based on the last fix (local:9000)
+        const res = await fetch("http://localhost:9000/api/bookings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
@@ -137,11 +132,22 @@ export default function BookRepairPage() {
         }
 
         const data = await res.json();
+
+        // --- FIX 2: Success Logic Update (Break the Loop) ---
+        // 1. Pause synchronization to prevent loop
+        setIsSyncing(false);
+
         setSubmitSuccess(true);
         setConfirmedTrackingId(data.trackingId);
         if (data.trackingId) dispatch(setTrackingId(data.trackingId));
+
+        // 2. Clear Redux and Formik states
         dispatch(resetBooking());
         formik.resetForm();
+
+        // 3. Re-enable sync after a short delay (allowing React to finish its renders)
+        setTimeout(() => setIsSyncing(true), 50);
+        // ----------------------------------------------------
       } catch (err: any) {
         setSubmitError(err.message);
       } finally {
@@ -150,9 +156,12 @@ export default function BookRepairPage() {
     },
   });
 
+  // FIX 3: Update useEffect to depend on isSyncing
   useEffect(() => {
-    dispatch(updateBookingField(formik.values));
-  }, [formik.values, dispatch]);
+    if (isSyncing) {
+      dispatch(updateBookingField(formik.values));
+    }
+  }, [formik.values, dispatch, isSyncing]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -218,7 +227,6 @@ export default function BookRepairPage() {
   }
 
   return (
-    // CHANGED: Added 'pt-24' (top padding) to ensure content starts below the fixed navbar
     <section className="min-h-screen w-full bg-slate-50 px-4 pt-24 pb-12 dark:bg-black">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 text-center">
