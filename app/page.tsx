@@ -11,7 +11,7 @@ export default function Home() {
     <>
       <HeroSection />
       <RepairServicesSection />
-      <PricingSection />
+      {/* <PricingSection /> */}
       <ReviewsSection />
       <ContactSection />
     </>
