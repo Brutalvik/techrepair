@@ -12,10 +12,10 @@ export const siteConfig = {
       label: "Services",
       href: "/services",
     },
-    {
-      label: "Pricing",
-      href: "/pricing",
-    },
+    // {
+    //   label: "Pricing",
+    //   href: "/pricing",
+    // },
     {
       label: "Track Repair",
       href: "/track-repair",
@@ -34,10 +34,10 @@ export const siteConfig = {
       label: "Services",
       href: "/services",
     },
-    {
-      label: "Pricing",
-      href: "/pricing",
-    },
+    // {
+    //   label: "Pricing",
+    //   href: "/pricing",
+    // },
     {
       label: "Track Repair",
       href: "/track-repair",
