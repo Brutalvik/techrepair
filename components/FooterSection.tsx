@@ -75,7 +75,7 @@ const FooterSection = () => {
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-100 pt-8 dark:border-zinc-900 md:flex-row">
           <div className="flex flex-col items-center md:items-start">
             <p className="text-xs text-slate-500 dark:text-slate-500">
-              © 2025 Infinite Tech Repairs. All Rights Reserved.
+              © 2025 Infinite Tech Repair. All Rights Reserved.
             </p>
           </div>
 

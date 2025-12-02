@@ -3,9 +3,9 @@ import { TermsOfService } from "@/components/TermsOfService"; // Import the comp
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms & Conditions - Infinite Tech Repairs",
+  title: "Terms & Conditions - Infinite Tech Repair",
   description:
-    "The official terms of service and repair guarantee for Infinite Tech Repairs, governed by Canadian law.",
+    "The official terms of service and repair guarantee for Infinite Tech Repair, governed by Canadian law.",
 };
 
 export default function TermsAndConditionsPage() {

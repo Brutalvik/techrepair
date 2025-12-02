@@ -140,7 +140,7 @@ export const CookiePolicy: React.FC = () => {
     <section className="bg-white dark:bg-zinc-900 shadow-lg rounded-xl max-w-4xl mx-auto my-12 p-6 sm:p-8 lg:p-10 border border-slate-200 dark:border-zinc-800">
       <header className="mb-10 border-b border-slate-100 dark:border-zinc-800 pb-6">
         <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white md:text-4xl">
-          Infinite Tech Repairs - Cookie Policy
+          Infinite Tech Repair - Cookie Policy
         </h1>
         <p className="text-sm text-slate-500 mt-2">
           Effective Date: <span className="font-semibold">{effectiveDate}</span>
@@ -309,10 +309,10 @@ export const CookiePolicy: React.FC = () => {
           <li>
             <span className="font-semibold">Email:</span>{" "}
             <a
-              href="mailto:privacy@infinitetechrepairs.com"
+              href="mailto:info@infinitetechrepair.com"
               className="text-blue-500 hover:underline"
             >
-              privacy@infinitetechrepairs.com
+              info@infinitetechrepair.com
             </a>
           </li>
           <li>

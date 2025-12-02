@@ -1,5 +1,5 @@
 /**
- * Infinite Tech Repairs - Backend
+ * Infinite Tech Repair - Backend
  * Booking Routes
  *
  * Provides API endpoints for creating and managing bookings.

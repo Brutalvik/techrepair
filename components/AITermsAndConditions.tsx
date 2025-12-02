@@ -3,9 +3,9 @@ import React from "react";
 // Disclaimer: This is a general legal template and MUST be reviewed by a licensed legal professional.
 const AI_TNC_CONTENT = {
   effectiveDate: "November 28, 2025",
-  companyName: "Infinite Tech Repairs Inc.",
+  companyName: "Infinite Tech Repair",
   chatbotName: "Infinite Tech Assistant",
-  contactEmail: "privacy@infinitetechrepairs.com",
+  contactEmail: "info@infinitetechrepair.com",
 };
 
 export const AITermsAndConditions: React.FC = () => {

@@ -3,9 +3,9 @@ import React from "react";
 // Disclaimer: This is a general legal template and MUST be reviewed by a licensed legal professional in Canada.
 const PP_CONTENT = {
   effectiveDate: "November 28, 2025",
-  companyName: "Infinite Tech Repairs Inc.",
+  companyName: "Infinite Tech Repair Inc.",
   governingProvince: "Alberta",
-  contactEmail: "privacy@infinitetechrepairs.com",
+  contactEmail: "info@infinitetechrepair.com",
   address: "707 7 Ave SW, Calgary, AB T2P 3H6",
 };
 

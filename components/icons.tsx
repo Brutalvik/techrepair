@@ -9,7 +9,7 @@ export const Logo: React.FC<LogoProps> = ({ className }) => {
   return (
     <img
       src="/logo.png" // ✅ make sure logo.png is in your /public folder
-      alt="Infinite Tech Repairs"
+      alt="Infinite Tech Repair"
       className={className}
     />
   );

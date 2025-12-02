@@ -3,7 +3,7 @@ import { AITermsAndConditions } from "@/components/AITermsAndConditions";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "AI Chatbot Terms - Infinite Tech Repairs",
+  title: "AI Chatbot Terms - Infinite Tech Repair",
   description:
     "Terms and conditions governing the use of the Infinite Tech Assistant chatbot.",
 };

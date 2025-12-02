@@ -10,7 +10,7 @@ import {
   NavbarMenuItem,
 } from "@heroui/navbar";
 import { link as linkStyles } from "@heroui/theme";
-import { Button } from "@heroui/button"; // <--- IMPORTED BUTTON
+import { Button } from "@heroui/button";
 import NextLink from "next/link";
 import clsx from "clsx";
 import { useState, useEffect } from "react";
@@ -89,7 +89,7 @@ export const Navbar = () => {
           <NextLink href="/" className="flex items-center gap-2 cursor-pointer">
             <Logo className="h-5 w-auto" />
             <span className="font-bold cursor-pointer transition-colors duration-150 hover:text-blue-500">
-              Infinite Tech Repairs
+              Infinite Tech Repair
             </span>
           </NextLink>
         </NavbarBrand>

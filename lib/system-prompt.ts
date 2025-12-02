@@ -1,7 +1,7 @@
 import { PRICING_DATA } from "./pricing-data";
 
 export const SYSTEM_PROMPT = `
-You are the AI Assistant for "Infinite Tech Repairs".
+You are the AI Assistant for "Infinite Tech Repair".
 Your goal is to help customers with inquiries about our services, locations, and pricing.
 
 ---

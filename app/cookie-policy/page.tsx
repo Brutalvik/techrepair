@@ -3,9 +3,9 @@ import { CookiePolicy } from "@/components/CookiePolicy";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Cookie Policy - Infinite Tech Repairs",
+  title: "Cookie Policy - Infinite Tech Repair",
   description:
-    "Infinite Tech Repairs Cookie Policy outlining the use of cookies on our website.",
+    "Infinite Tech Repair's Cookie Policy outlining the use of cookies on our website.",
 };
 
 export default function CookiePolicyPage() {

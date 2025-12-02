@@ -62,7 +62,7 @@ export default function HeroSection() {
           >
             <motion.div className="space-y-3" variants={textItemVariants}>
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
-                Infinite Tech Repairs
+                Infinite Tech Repair
               </p>
 
               <h1 className="text-3xl font-semibold leading-tight md:text-4xl lg:text-5xl">

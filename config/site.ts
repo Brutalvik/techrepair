@@ -2,7 +2,7 @@ export type SiteConfig = typeof siteConfig;
 
 export const siteConfig = {
   name: "Infinite Tech Repair",
-  description: "Your One-Stop Shop for All Tech Repairs",
+  description: "Your One-Stop Shop for All Tech Repair",
   navItems: [
     {
       label: "Home",

@@ -3,7 +3,7 @@ import { PrivacyPolicy } from "@/components/PrivacyPolicy"; // Import the compon
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy - Infinite Tech Repairs",
+  title: "Privacy Policy - Infinite Tech Repair",
   description:
     "Our commitment to protecting your personal information under Canadian PIPEDA law.",
 };
