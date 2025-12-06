@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation"; // Added router hooks
 import { motion } from "framer-motion";
 import {
   Search,
@@ -20,8 +21,8 @@ const STEPS = [
   { id: "Booked", label: "Booked", icon: CalendarIcon, color: "blue" },
   { id: "Diagnosing", label: "Diagnosing", icon: Search, color: "yellow" },
   { id: "Repairing", label: "Repairing", icon: Wrench, color: "orange" },
-  { id: "Ready", label: "Ready", icon: CheckCircle, color: "purple" }, // Shortened label for mobile
-  { id: "Completed", label: "Done", icon: Package, color: "green" }, // Shortened label for mobile
+  { id: "Ready", label: "Ready", icon: CheckCircle, color: "purple" },
+  { id: "Completed", label: "Done", icon: Package, color: "green" },
 ];
 
 function CalendarIcon(props: any) {
@@ -29,41 +30,44 @@ function CalendarIcon(props: any) {
 }
 
 export default function TrackRepairPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
   const [trackingId, setTrackingId] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [repairData, setRepairData] = useState<any>(null);
 
-  const handleInputChange = (val: string) => {
-    let input = val.toUpperCase();
-    if (trackingId === "" && /^[0-9]/.test(input)) {
-      input = "TR-" + input;
-    }
-    setTrackingId(input);
-  };
-
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!trackingId.trim()) return;
-
-    setLoading(true);
-    setError("");
-    setRepairData(null);
-
-    let finalId = trackingId.trim().toUpperCase();
+  // --- HELPER: Format ID ---
+  // Centralizes the ID cleanup logic (e.g. adding TR- prefix)
+  const formatTrackingId = (rawId: string) => {
+    let finalId = rawId.trim().toUpperCase();
+    // Handle "TR1234" -> "TR-1234"
     if (
       finalId.startsWith("TR") &&
       !finalId.includes("-") &&
       finalId.length > 2
     ) {
       finalId = finalId.replace("TR", "TR-");
-    } else if (!finalId.startsWith("TR") && !isNaN(Number(finalId))) {
+    }
+    // Handle "1234" -> "TR-1234"
+    else if (!finalId.startsWith("TR") && !isNaN(Number(finalId))) {
       finalId = "TR-" + finalId;
     }
-    setTrackingId(finalId);
+    return finalId;
+  };
+
+  // --- API FETCH FUNCTION ---
+  const fetchRepairStatus = useCallback(async (formattedId: string) => {
+    if (!formattedId) return;
+
+    setLoading(true);
+    setError("");
+    setRepairData(null);
 
     try {
-      const res = await fetch(`${API_BASE_URL}/api/bookings/${finalId}`);
+      const res = await fetch(`${API_BASE_URL}/api/bookings/${formattedId}`);
       if (!res.ok) throw new Error("Repair not found. Please check your ID.");
       const data = await res.json();
       setRepairData(data);
@@ -72,8 +76,45 @@ export default function TrackRepairPage() {
     } finally {
       setLoading(false);
     }
+  }, []);
+
+  // --- EFFECT: URL DRIVER ---
+  // Watches the URL for changes and triggers the fetch.
+  // This handles both initial load (from email) AND manual searches (via router push)
+  useEffect(() => {
+    const urlId = searchParams.get("trackingId");
+    if (urlId) {
+      const formatted = formatTrackingId(urlId);
+      // Only update state if it differs to avoid loops (though formatting usually stabilizes it)
+      setTrackingId((prev) => (prev !== formatted ? formatted : prev));
+      fetchRepairStatus(formatted);
+    }
+  }, [searchParams, fetchRepairStatus]);
+
+  // --- INPUT HANDLER ---
+  const handleInputChange = (val: string) => {
+    let input = val.toUpperCase();
+    if (trackingId === "" && /^[0-9]/.test(input)) {
+      input = "TR-" + input;
+    }
+    setTrackingId(input);
   };
 
+  // --- MANUAL SEARCH HANDLER ---
+  // Instead of fetching directly, we update the URL.
+  // The useEffect above detects the URL change and handles the data fetching.
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trackingId.trim()) return;
+
+    const formattedId = formatTrackingId(trackingId);
+
+    // Update the URL (this triggers the useEffect)
+    // replace: updates current history entry so back button works nicely
+    router.replace(`${pathname}?trackingId=${formattedId}`);
+  };
+
+  // --- STATUS HELPERS ---
   const getStepStatus = (stepId: string, currentStatus: string) => {
     const stepIndex = STEPS.findIndex((s) => s.id === stepId);
     const currentIndex = STEPS.findIndex(
@@ -205,7 +246,7 @@ export default function TrackRepairPage() {
             <div className="p-6 md:p-8">
               {/* --- HORIZONTAL TIMELINE (Responsive) --- */}
               <div className="relative flex justify-between">
-                {/* Connecting Line (Absolute positioned across the width) */}
+                {/* Connecting Line */}
                 <div className="absolute top-4 left-0 h-0.5 w-full -translate-y-1/2 bg-slate-100 dark:bg-zinc-800 md:top-5 md:h-1" />
 
                 {STEPS.map((step) => {
@@ -220,19 +261,16 @@ export default function TrackRepairPage() {
                     >
                       <div
                         className={clsx(
-                          // Mobile: h-8 w-8, Desktop: h-10 w-10
                           "flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all duration-300 md:h-10 md:w-10",
                           status === "completed" || status === "current"
                             ? styles.activeBorder
                             : "border-slate-200 bg-white text-slate-300 dark:border-zinc-700 dark:bg-zinc-900"
                         )}
                       >
-                        {/* Smaller icons on mobile */}
                         <Icon className="w-3.5 h-3.5 md:w-[18px] md:h-[18px]" />
                       </div>
 
                       <div className="mt-2 text-center">
-                        {/* Compact text for mobile, normal for desktop */}
                         <p
                           className={clsx(
                             "text-[10px] font-semibold md:text-sm transition-colors",
