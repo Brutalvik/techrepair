@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import {
   RefreshCw,
@@ -21,7 +21,13 @@ import {
   LayoutList,
   ChevronLeft,
   ChevronRight,
+  MapPin,
+  Phone,
+  Mail,
+  Smartphone,
+  Calendar,
   FileText,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
@@ -31,8 +37,16 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  useDisclosure,
+  useDisclosure as useModalDisclosure,
 } from "@heroui/modal";
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerBody,
+  DrawerFooter,
+  useDisclosure as useDrawerDisclosure,
+} from "@heroui/react";
 import clsx from "clsx";
 import { API_BASE_URL } from "@/config/api-config";
 
@@ -44,9 +58,12 @@ type Booking = {
   device_type: string;
   issue_description: string;
   email: string;
+  phone?: string;
+  address?: string;
   status: string;
   created_at: string;
   booking_time: string;
+  booking_date?: string;
   updated_at: string;
   archived_at?: string | null;
 };
@@ -71,11 +88,28 @@ const STATUS_OPTIONS = [
   "Completed",
 ];
 
+const STATUS_FLOW = ["Booked", "Diagnosing", "Repairing", "Ready", "Completed"];
+
 const RECORDS_PER_PAGE_OPTIONS = [10, 20, 50, 100];
 
 export default function AdminDashboard() {
   const { data: session, status: authStatus } = useSession();
-  const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
+
+  // Modal for Archive Confirmation
+  const {
+    isOpen: isArchiveOpen,
+    onOpen: onArchiveOpen,
+    onClose: onArchiveClose,
+    onOpenChange: onArchiveOpenChange,
+  } = useModalDisclosure();
+
+  // Drawer for Booking Details
+  const {
+    isOpen: isDrawerOpen,
+    onOpen: onDrawerOpen,
+    onClose: onDrawerClose,
+    onOpenChange: onDrawerOpenChange,
+  } = useDrawerDisclosure();
 
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -85,7 +119,10 @@ export default function AdminDashboard() {
   const [loadingData, setLoadingData] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+
   const [bookingToArchive, setBookingToArchive] = useState<number | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+
   const [viewMode, setViewMode] = useState<"active" | "archived">("active");
 
   const [sortConfig, setSortConfig] = useState<SortConfig>({
@@ -106,7 +143,6 @@ export default function AdminDashboard() {
 
       try {
         let url = "";
-
         if (query) {
           url = `${API_BASE_URL}/api/admin/bookings?q=${encodeURIComponent(
             query
@@ -181,15 +217,23 @@ export default function AdminDashboard() {
     return !!booking.archived_at;
   };
 
-  const openArchiveModal = (id: number) => {
+  // --- ACTIONS ---
+
+  const handleRowClick = (booking: Booking) => {
+    setSelectedBooking(booking);
+    onDrawerOpen();
+  };
+
+  const openArchiveModal = (e: React.MouseEvent<HTMLElement>, id: number) => {
+    e.stopPropagation();
     setBookingToArchive(id);
-    onOpen();
+    onArchiveOpen();
   };
 
   const handleArchiveConfirm = async () => {
     if (!bookingToArchive) return;
     setUpdatingId(bookingToArchive);
-    onClose();
+    onArchiveClose();
 
     try {
       const res = await fetch(
@@ -199,6 +243,9 @@ export default function AdminDashboard() {
 
       if (res.ok) {
         fetchBookings(searchQuery, currentPage, limit);
+        if (selectedBooking?.id === bookingToArchive) {
+          onDrawerClose();
+        }
       } else {
         alert("Failed to archive");
       }
@@ -224,17 +271,19 @@ export default function AdminDashboard() {
 
       if (res.ok) {
         const updatedRecord = await res.json();
+        const updatedBooking = {
+          ...bookings.find((b) => b.id === id)!,
+          status: newStatus,
+          updated_at: updatedRecord.data.updated_at,
+        };
+
         setBookings((prev) =>
-          prev.map((b) =>
-            b.id === id
-              ? {
-                  ...b,
-                  status: newStatus,
-                  updated_at: updatedRecord.data.updated_at,
-                }
-              : b
-          )
+          prev.map((b) => (b.id === id ? updatedBooking : b))
         );
+
+        if (selectedBooking?.id === id) {
+          setSelectedBooking(updatedBooking);
+        }
       } else {
         alert("Failed to update status");
       }
@@ -302,6 +351,15 @@ export default function AdminDashboard() {
     }
   };
 
+  const getStepState = (stepName: string, currentStatus: string) => {
+    const currentIndex = STATUS_FLOW.indexOf(currentStatus);
+    const stepIndex = STATUS_FLOW.indexOf(stepName);
+
+    if (stepIndex < currentIndex) return "completed";
+    if (stepIndex === currentIndex) return "current";
+    return "pending";
+  };
+
   if (authStatus === "loading")
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 dark:bg-black">
@@ -334,7 +392,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 px-4 pt-24 pb-12 dark:bg-black">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-full lg:max-w-[1600px]">
         {/* HEADER & PROFILE */}
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
@@ -452,190 +510,187 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <>
-            {/* DESKTOP VIEW - TABLE */}
+            {/* DESKTOP VIEW - TABLE (Fixed Layout) */}
             <div className="hidden md:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-slate-50 text-slate-500 dark:bg-zinc-800/50 dark:text-slate-400">
-                    <tr>
-                      {[
-                        { label: "ID", key: "tracking_id" },
-                        { label: "Customer", key: "customer_name" },
-                        { label: "Device", key: "device_type" },
-                        { label: "Issue", key: "issue_description" },
-                        { label: "Booked", key: "booking_time" },
-                        {
-                          label:
-                            viewMode === "active" && !searchQuery
-                              ? "Updated"
-                              : "Status/Archived",
-                          key: "updated_at",
-                        },
-                        { label: "Status", key: "status" },
-                      ].map((col) => (
-                        <th
-                          key={col.key}
-                          className="cursor-pointer px-6 py-4 font-medium hover:bg-slate-100 dark:hover:bg-zinc-800"
-                          onClick={() => handleSort(col.key as keyof Booking)}
-                        >
-                          <div className="flex items-center gap-1.5 whitespace-nowrap">
-                            {col.label}
-                            {sortConfig.key === col.key ? (
-                              sortConfig.direction === "asc" ? (
-                                <ArrowUp size={14} className="text-blue-500" />
-                              ) : (
-                                <ArrowDown
-                                  size={14}
-                                  className="text-blue-500"
-                                />
-                              )
-                            ) : (
-                              <ArrowUpDown
-                                size={14}
-                                className="text-slate-300 dark:text-zinc-600"
-                              />
-                            )}
-                          </div>
-                        </th>
-                      ))}
-                      <th className="px-6 py-4 font-medium">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
-                    {sortedBookings.map((booking) => (
-                      <tr
-                        key={booking.id}
-                        className="group hover:bg-slate-50 dark:hover:bg-zinc-800/50"
+              <table className="w-full table-fixed text-left text-sm">
+                <thead className="bg-slate-50 text-slate-500 dark:bg-zinc-800/50 dark:text-slate-400">
+                  <tr>
+                    {[
+                      { label: "ID", key: "tracking_id", width: "w-[12%]" },
+                      {
+                        label: "Customer",
+                        key: "customer_name",
+                        width: "w-[20%]",
+                      },
+                      { label: "Device", key: "device_type", width: "w-[15%]" },
+                      {
+                        label: "Booked",
+                        key: "booking_time",
+                        width: "w-[15%]",
+                      },
+                      {
+                        label:
+                          viewMode === "active" && !searchQuery
+                            ? "Updated"
+                            : "Status/Archived",
+                        key: "updated_at",
+                        width: "w-[18%]",
+                      },
+                      { label: "Status", key: "status", width: "w-[10%]" },
+                    ].map((col) => (
+                      <th
+                        key={col.key}
+                        className={`cursor-pointer px-6 py-4 font-medium hover:bg-slate-100 dark:hover:bg-zinc-800 ${col.width}`}
+                        onClick={() => handleSort(col.key as keyof Booking)}
                       >
-                        <td className="px-6 py-4 font-mono text-xs text-slate-500">
-                          {booking.tracking_id}
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-slate-900 dark:text-white">
-                            {booking.customer_name}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {booking.email}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
-                          {booking.device_type}
-                        </td>
-
-                        {/* --- ISSUE COLUMN FIXED: Wraps text normally --- */}
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-slate-600 dark:text-slate-400 whitespace-normal min-w-[200px]">
-                            {booking.issue_description || "N/A"}
-                          </div>
-                        </td>
-
-                        <td className="px-6 py-4">
-                          <div className="text-slate-700 dark:text-slate-300">
-                            {formatTimeSlot(booking.booking_time)}
-                          </div>
-                          <div className="text-xs text-slate-400">
-                            {new Date(booking.created_at).toLocaleDateString()}
-                          </div>
-                        </td>
-
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-2 text-slate-500">
-                            {isArchived(booking) ? (
-                              <Archive size={14} />
+                        <div className="flex items-center gap-1.5 whitespace-nowrap overflow-hidden">
+                          {col.label}
+                          {sortConfig.key === col.key ? (
+                            sortConfig.direction === "asc" ? (
+                              <ArrowUp size={14} className="text-blue-500" />
                             ) : (
-                              <Clock size={14} />
-                            )}
-                            <span>
-                              {formatTimestamp(
-                                isArchived(booking)
-                                  ? booking.archived_at!
-                                  : booking.updated_at
-                              )}
-                            </span>
-                          </div>
-                        </td>
-
-                        <td className="px-6 py-4">
-                          <span
-                            className={clsx(
-                              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-                              getStatusColor(booking.status)
-                            )}
-                          >
-                            {booking.status}
-                          </span>
-                        </td>
-
-                        <td className="px-6 py-4">
-                          {isArchived(booking) ? (
-                            <span className="text-xs text-slate-400 italic">
-                              Read Only
-                            </span>
+                              <ArrowDown size={14} className="text-blue-500" />
+                            )
                           ) : (
-                            <div className="relative min-w-[140px]">
-                              {updatingId === booking.id ? (
-                                <div className="flex items-center gap-2 py-1.5 pl-3 text-blue-600">
-                                  <Loader2 className="animate-spin" size={16} />
-                                  <span className="text-xs font-medium">
-                                    Updating...
-                                  </span>
-                                </div>
-                              ) : booking.status === "Completed" ? (
-                                <div className="flex items-center gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="flat"
-                                    color="primary"
-                                    className="h-8 px-3 font-medium"
-                                    onPress={() =>
-                                      handleStatusChange(
-                                        booking.id,
-                                        "Repairing"
-                                      )
-                                    }
-                                    startContent={<RotateCcw size={14} />}
-                                  >
-                                    Reopen
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="flat"
-                                    color="danger"
-                                    className="h-8 px-3 font-medium"
-                                    onPress={() => openArchiveModal(booking.id)}
-                                    startContent={<Archive size={14} />}
-                                  >
-                                    Archive
-                                  </Button>
-                                </div>
-                              ) : (
-                                <select
-                                  value={booking.status}
-                                  onChange={(e) =>
-                                    handleStatusChange(
-                                      booking.id,
-                                      e.target.value
-                                    )
-                                  }
-                                  className={clsx(
-                                    "cursor-pointer w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-3 pr-8 text-xs font-semibold shadow-sm focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
-                                  )}
-                                >
-                                  {STATUS_OPTIONS.map((opt) => (
-                                    <option key={opt} value={opt}>
-                                      {opt}
-                                    </option>
-                                  ))}
-                                </select>
-                              )}
-                            </div>
+                            <ArrowUpDown
+                              size={14}
+                              className="text-slate-300 dark:text-zinc-600"
+                            />
                           )}
-                        </td>
-                      </tr>
+                        </div>
+                      </th>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                    <th className="px-6 py-4 font-medium w-[10%]">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                  {sortedBookings.map((booking) => (
+                    <tr
+                      key={booking.id}
+                      onClick={() => handleRowClick(booking)}
+                      className="group cursor-pointer hover:bg-blue-50/50 dark:hover:bg-blue-900/10 transition-colors"
+                    >
+                      <td className="px-6 py-4 font-mono text-xs text-slate-500 whitespace-nowrap">
+                        {booking.tracking_id}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-slate-900 dark:text-white truncate">
+                          {booking.customer_name}
+                        </div>
+                        <div className="text-xs text-slate-500 truncate">
+                          {booking.email}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 dark:text-slate-300 truncate">
+                        {booking.device_type}
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <div className="text-slate-700 dark:text-slate-300">
+                          {formatTimeSlot(booking.booking_time)}
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {new Date(booking.created_at).toLocaleDateString()}
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2 text-slate-500">
+                          {isArchived(booking) ? (
+                            <Archive size={14} />
+                          ) : (
+                            <Clock size={14} />
+                          )}
+                          <span>
+                            {formatTimestamp(
+                              isArchived(booking)
+                                ? booking.archived_at!
+                                : booking.updated_at
+                            )}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-6 py-4">
+                        <span
+                          className={clsx(
+                            "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                            getStatusColor(booking.status)
+                          )}
+                        >
+                          {booking.status}
+                        </span>
+                      </td>
+
+                      <td
+                        className="px-6 py-4"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {isArchived(booking) ? (
+                          <span className="text-xs text-slate-400 italic">
+                            Read Only
+                          </span>
+                        ) : (
+                          <div className="relative w-full">
+                            {updatingId === booking.id ? (
+                              <div className="flex items-center justify-center gap-2 py-1.5 text-blue-600">
+                                <Loader2 className="animate-spin" size={16} />
+                              </div>
+                            ) : booking.status === "Completed" ? (
+                              <div className="flex items-center gap-2">
+                                {/* FIX: Using onClick instead of onPress for event bubbling control */}
+                                <Button
+                                  size="sm"
+                                  variant="flat"
+                                  color="primary"
+                                  isIconOnly
+                                  onPress={(e: any) => {
+                                    e.stopPropagation();
+                                    handleStatusChange(booking.id, "Repairing");
+                                  }}
+                                  title="Reopen"
+                                >
+                                  <RotateCcw size={16} />
+                                </Button>
+                                {/* FIX: Using onClick instead of onPress */}
+                                <Button
+                                  size="sm"
+                                  variant="flat"
+                                  color="danger"
+                                  isIconOnly
+                                  onPress={(e: any) =>
+                                    openArchiveModal(e, booking.id)
+                                  }
+                                  title="Archive"
+                                >
+                                  <Archive size={16} />
+                                </Button>
+                              </div>
+                            ) : (
+                              <select
+                                value={booking.status}
+                                onChange={(e) =>
+                                  handleStatusChange(booking.id, e.target.value)
+                                }
+                                onClick={(e) => e.stopPropagation()}
+                                className={clsx(
+                                  "cursor-pointer appearance-none w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-2 pr-6 text-xs font-semibold shadow-sm focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+                                )}
+                              >
+                                {STATUS_OPTIONS.map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
 
             {/* MOBILE VIEW - CARDS */}
@@ -643,7 +698,8 @@ export default function AdminDashboard() {
               {sortedBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
+                  onClick={() => handleRowClick(booking)}
+                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 active:scale-[0.98] transition-transform"
                 >
                   <div className="mb-4 flex items-center justify-between">
                     <span className="font-mono text-xs font-bold text-slate-500">
@@ -704,22 +760,12 @@ export default function AdminDashboard() {
                     </div>
                   </div>
 
-                  {/* --- ISSUE SECTION (MOBILE) FIXED: Shows full text --- */}
-                  <div className="mb-4 rounded-lg bg-slate-50 p-3 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-800">
-                    <div className="flex items-center gap-2 mb-1">
-                      <FileText size={12} className="text-slate-400" />
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        Issue Reported
-                      </p>
-                    </div>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">
-                      {booking.issue_description || "No description provided."}
-                    </p>
-                  </div>
-
                   {/* Actions Section */}
                   {!isArchived(booking) && (
-                    <div className="pt-3 border-t border-slate-100 dark:border-zinc-800">
+                    <div
+                      className="pt-3 border-t border-slate-100 dark:border-zinc-800"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {updatingId === booking.id ? (
                         <div className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 py-2 text-blue-600 dark:border-zinc-700 dark:bg-zinc-800">
                           <Loader2 className="animate-spin" size={16} />
@@ -729,10 +775,12 @@ export default function AdminDashboard() {
                         </div>
                       ) : booking.status === "Completed" ? (
                         <div className="grid grid-cols-2 gap-3">
+                          {/* FIX: Using onClick */}
                           <Button
-                            onPress={() =>
-                              handleStatusChange(booking.id, "Repairing")
-                            }
+                            onPress={(e: any) => {
+                              e.stopPropagation();
+                              handleStatusChange(booking.id, "Repairing");
+                            }}
                             color="primary"
                             variant="flat"
                             size="sm"
@@ -741,8 +789,11 @@ export default function AdminDashboard() {
                           >
                             Reopen
                           </Button>
+                          {/* FIX: Using onClick */}
                           <Button
-                            onPress={() => openArchiveModal(booking.id)}
+                            onPress={(e: any) =>
+                              openArchiveModal(e, booking.id)
+                            }
                             color="danger"
                             variant="flat"
                             size="sm"
@@ -872,7 +923,8 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
+      {/* --- ARCHIVE CONFIRMATION MODAL --- */}
+      <Modal isOpen={isArchiveOpen} onOpenChange={onArchiveOpenChange}>
         <ModalContent>
           {(onClose) => (
             <>
@@ -903,6 +955,236 @@ export default function AdminDashboard() {
           )}
         </ModalContent>
       </Modal>
+
+      {/* --- SIDE DRAWER FOR CUSTOMER DETAILS --- */}
+      <Drawer isOpen={isDrawerOpen} onClose={onDrawerClose} size="lg">
+        <DrawerContent>
+          {(onClose) => (
+            <>
+              <DrawerHeader className="border-b border-slate-100 dark:border-zinc-800">
+                <div className="flex flex-col gap-1">
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                    Booking Details
+                  </h2>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-sm text-slate-500">
+                      #{selectedBooking?.tracking_id}
+                    </span>
+                    <span
+                      className={clsx(
+                        "text-[10px] uppercase font-bold px-2 py-0.5 rounded-full",
+                        getStatusColor(selectedBooking?.status || "")
+                      )}
+                    >
+                      {selectedBooking?.status}
+                    </span>
+                  </div>
+                </div>
+              </DrawerHeader>
+              <DrawerBody className="p-0">
+                {selectedBooking && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-slate-100 dark:divide-zinc-800">
+                    {/* LEFT COLUMN: Customer & Device */}
+                    <div className="p-6 space-y-8">
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+                          <UserIcon size={14} /> Customer Information
+                        </h3>
+                        <div className="space-y-4">
+                          <div className="flex items-start gap-3">
+                            <div>
+                              <p className="font-bold text-slate-900 dark:text-white text-lg">
+                                {selectedBooking.customer_name}
+                              </p>
+                              <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+                                <Mail size={14} />
+                                <a
+                                  href={`mailto:${selectedBooking.email}`}
+                                  className="hover:text-blue-500 transition-colors"
+                                >
+                                  {selectedBooking.email}
+                                </a>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm text-slate-500 mt-1">
+                                <Phone size={14} />
+                                <a
+                                  href={`tel:${selectedBooking.phone || ""}`}
+                                  className="hover:text-blue-500 transition-colors"
+                                >
+                                  {selectedBooking.phone || "No phone provided"}
+                                </a>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+                          <Smartphone size={14} /> Device & Service
+                        </h3>
+                        <div className="bg-slate-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-slate-100 dark:border-zinc-800">
+                          {/* UPDATED: Increased gap to 12 for distinct spacing */}
+                          <div className="grid grid-cols-2 gap-12">
+                            <div>
+                              <p className="text-[10px] text-slate-400 uppercase">
+                                Device Type
+                              </p>
+                              <p className="font-semibold text-slate-800 dark:text-slate-200">
+                                {selectedBooking.device_type}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-[10px] text-slate-400 uppercase">
+                                Service Type
+                              </p>
+                              <p className="font-semibold text-slate-800 dark:text-slate-200">
+                                Drop-off
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* RIGHT COLUMN: Issue & Timeline */}
+                    <div className="p-6 space-y-8 bg-slate-50/50 dark:bg-black/20">
+                      <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+                          <FileText size={14} /> Reported Issue
+                        </h3>
+                        <div className="bg-white dark:bg-zinc-900 p-4 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-sm">
+                          <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+                            {selectedBooking.issue_description}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* --- CONDITIONAL TIMELINE --- */}
+                      {selectedBooking.status !== "Booked" && (
+                        <div>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
+                            <Calendar size={14} /> Tracking Timeline
+                          </h3>
+                          {/* Dynamic Status Stepper */}
+                          <div className="space-y-0 relative before:absolute before:left-3 before:top-2 before:bottom-4 before:w-0.5 before:bg-slate-200 dark:before:bg-zinc-800">
+                            {STATUS_FLOW.map((step, index) => {
+                              const currentIndex = STATUS_FLOW.indexOf(
+                                selectedBooking.status
+                              );
+
+                              // Logic Change: Hide future steps to create a "growing log" effect
+                              if (index > currentIndex) return null;
+
+                              const state = getStepState(
+                                step,
+                                selectedBooking.status
+                              );
+                              const isCompleted = state === "completed";
+                              const isCurrent = state === "current";
+
+                              return (
+                                <div
+                                  key={step}
+                                  className="relative pl-10 pb-6 last:pb-0 group"
+                                >
+                                  <div
+                                    className={clsx(
+                                      "absolute left-0 top-0.5 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-all duration-300 z-10",
+                                      isCompleted
+                                        ? "border-green-500 bg-green-500 text-white"
+                                        : isCurrent
+                                          ? "border-blue-500 bg-white ring-4 ring-blue-100 dark:bg-zinc-900 dark:ring-blue-900/30"
+                                          : "border-slate-300 bg-white dark:border-zinc-700 dark:bg-zinc-900"
+                                    )}
+                                  >
+                                    {isCompleted && (
+                                      <CheckCircle2
+                                        size={14}
+                                        className="text-white"
+                                      />
+                                    )}
+                                    {isCurrent && (
+                                      <div className="h-2 w-2 rounded-full bg-blue-500" />
+                                    )}
+                                  </div>
+
+                                  <div>
+                                    <p
+                                      className={clsx(
+                                        "text-sm font-bold transition-colors",
+                                        isCompleted
+                                          ? "text-slate-700 dark:text-slate-300"
+                                          : isCurrent
+                                            ? "text-blue-600 dark:text-blue-400"
+                                            : "text-slate-400 dark:text-slate-600"
+                                      )}
+                                    >
+                                      {step}
+                                    </p>
+
+                                    {/* Timestamp Logic */}
+                                    {step === "Booked" && (
+                                      <p className="text-xs text-slate-500 mt-0.5">
+                                        {new Date(
+                                          selectedBooking.created_at
+                                        ).toLocaleString()}
+                                      </p>
+                                    )}
+
+                                    {/* Show 'Updated' timestamp ONLY on the Current step if it's not Booked */}
+                                    {isCurrent && step !== "Booked" && (
+                                      <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5 font-medium">
+                                        Latest Update:{" "}
+                                        {new Date(
+                                          selectedBooking.updated_at
+                                        ).toLocaleString()}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Archive Tag if applicable */}
+                          {selectedBooking.archived_at && (
+                            <div className="mt-6 pt-4 border-t border-slate-100 dark:border-zinc-800 flex items-center gap-2 text-slate-400">
+                              <Archive size={14} />
+                              <p className="text-xs italic">
+                                Archived on{" "}
+                                {new Date(
+                                  selectedBooking.archived_at
+                                ).toLocaleDateString()}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {selectedBooking.address && (
+                        <div>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-2">
+                            <MapPin size={14} /> Location
+                          </h3>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">
+                            {selectedBooking.address}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </DrawerBody>
+              <DrawerFooter className="border-t border-slate-100 dark:border-zinc-800">
+                <Button color="primary" onPress={onClose}>
+                  Close
+                </Button>
+              </DrawerFooter>
+            </>
+          )}
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 }
