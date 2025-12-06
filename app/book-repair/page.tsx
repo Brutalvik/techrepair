@@ -3,16 +3,17 @@
 import { useState, useEffect, useMemo } from "react";
 import { useFormik } from "formik";
 import * as Yup from "yup";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin,
-  Upload,
   X,
   CheckCircle,
   Smartphone,
   User,
   Mail,
   Phone,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Input, Textarea } from "@heroui/input";
@@ -30,8 +31,18 @@ import { useRouter } from "next/navigation";
 
 // --- CONFIG ---
 const LOCATIONS = [
-  { id: "downtown", name: "Downtown Hub", address: "123 Main St" },
-  { id: "westside", name: "Westside Center", address: "456 West Ave" },
+  {
+    id: "downtown",
+    name: "Downtown Hub",
+    address: "123 Main St",
+    phone: "+1 (555) 123-4567",
+  },
+  {
+    id: "westside",
+    name: "Westside Center",
+    address: "456 West Ave",
+    phone: "+1 (555) 987-6543",
+  },
 ];
 
 const DEVICE_TYPES = [
@@ -54,12 +65,12 @@ const BookingSchema = Yup.object().shape({
   date: Yup.string().required("Required"),
   time: Yup.string()
     .required("Required")
-    .test("is-business-hours", "8am-8pm only", (val) => {
+    // Validation matches the modal logic: 11am to 8pm (20:00)
+    .test("is-business-hours", "Operating hours: 11am - 8pm", (val) => {
       if (!val) return false;
       const [h] = val.split(":").map(Number);
-      return h >= 8 && h <= 20;
+      return h >= 11 && h <= 20;
     }),
-  images: Yup.array().max(3, "Max 3"),
 });
 
 export default function BookRepairPage() {
@@ -72,7 +83,9 @@ export default function BookRepairPage() {
   const [submitError, setSubmitError] = useState("");
   const [confirmedTrackingId, setConfirmedTrackingId] = useState("");
 
-  // FIX 1: State to control when the Redux sync useEffect is active
+  // Modal State
+  const [showOutHoursModal, setShowOutHoursModal] = useState(false);
+
   const [isSyncing, setIsSyncing] = useState(true);
 
   const { defaultDate, defaultTime } = useMemo(() => {
@@ -81,9 +94,9 @@ export default function BookRepairPage() {
     const month = String(now.getMonth() + 1).padStart(2, "0");
     const day = String(now.getDate()).padStart(2, "0");
     const dateStr = `${year}-${month}-${day}`;
-    now.setHours(now.getHours() + 2);
-    const hours = String(now.getHours()).padStart(2, "0");
-    const minutes = String(now.getMinutes()).padStart(2, "0");
+    // Default time is handled, but user must pick specific slot
+    const hours = "12";
+    const minutes = "00";
     return { defaultDate: dateStr, defaultTime: `${hours}:${minutes}` };
   }, []);
 
@@ -98,7 +111,6 @@ export default function BookRepairPage() {
       issueDescription: bookingState.issueDescription || "",
       date: bookingState.date || defaultDate,
       time: bookingState.time || defaultTime,
-      images: bookingState.images || [],
     },
     validationSchema: BookingSchema,
     onSubmit: async (values) => {
@@ -116,10 +128,9 @@ export default function BookRepairPage() {
           address: LOCATIONS.find((l) => l.id === values.location)?.address,
           bookingDate: values.date,
           bookingTime: values.time,
-          images: values.images,
+          images: [], // Images removed
         };
 
-        // Frontend URL should be correct based on the last fix (local:9000)
         const res = await fetch(`${API_BASE_URL}/api/bookings`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -133,21 +144,15 @@ export default function BookRepairPage() {
 
         const data = await res.json();
 
-        // --- FIX 2: Success Logic Update (Break the Loop) ---
-        // 1. Pause synchronization to prevent loop
         setIsSyncing(false);
-
         setSubmitSuccess(true);
         setConfirmedTrackingId(data.trackingId);
         if (data.trackingId) dispatch(setTrackingId(data.trackingId));
 
-        // 2. Clear Redux and Formik states
         dispatch(resetBooking());
         formik.resetForm();
 
-        // 3. Re-enable sync after a short delay (allowing React to finish its renders)
         setTimeout(() => setIsSyncing(true), 50);
-        // ----------------------------------------------------
       } catch (err: any) {
         setSubmitError(err.message);
       } finally {
@@ -156,36 +161,103 @@ export default function BookRepairPage() {
     },
   });
 
-  // FIX 3: Update useEffect to depend on isSyncing
+  // Handle Time Change explicitly to trigger Modal
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    formik.setFieldValue("time", val);
+
+    if (val) {
+      const [h] = val.split(":").map(Number);
+      // Check if time is before 11 (00-10) or after 20 (21-23)
+      if (h < 11 || h > 20) {
+        setShowOutHoursModal(true);
+      }
+    }
+  };
+
   useEffect(() => {
     if (isSyncing) {
       dispatch(updateBookingField(formik.values));
     }
   }, [formik.values, dispatch, isSyncing]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      if (formik.values.images.length + files.length > 3) {
-        alert("Max 3 images allowed.");
-        return;
-      }
-      files.forEach((file) => {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const newImages = [...formik.values.images, reader.result as string];
-          formik.setFieldValue("images", newImages);
-        };
-        reader.readAsDataURL(file);
-      });
-    }
-  };
+  // --- MODAL COMPONENT ---
+  const OutHoursModal = () => (
+    <AnimatePresence>
+      {showOutHoursModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowOutHoursModal(false)}
+          />
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.95, opacity: 0 }}
+            className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-white p-6 shadow-2xl dark:bg-zinc-900 border border-slate-200 dark:border-zinc-700"
+          >
+            <div className="mb-4 flex items-start gap-4">
+              <div className="rounded-full bg-yellow-100 p-3 text-yellow-600 dark:bg-yellow-900/30 dark:text-yellow-500">
+                <Clock size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                  Outside Standard Hours
+                </h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Our standard drop-off hours are{" "}
+                  <strong>11:00 AM to 8:00 PM</strong>. However, we can likely
+                  accommodate you! Please call the location directly to confirm
+                  a special drop-off time.
+                </p>
+              </div>
+            </div>
 
-  const removeImage = (index: number) => {
-    const newImages = [...formik.values.images];
-    newImages.splice(index, 1);
-    formik.setFieldValue("images", newImages);
-  };
+            <div className="mt-4 space-y-3 rounded-lg bg-slate-50 p-4 dark:bg-zinc-800/50">
+              {LOCATIONS.map((loc) => (
+                <div
+                  key={loc.id}
+                  className="flex items-center justify-between border-b border-slate-200 pb-2 last:border-0 last:pb-0 dark:border-zinc-700"
+                >
+                  <div>
+                    <p className="font-semibold text-slate-800 dark:text-slate-200">
+                      {loc.name}
+                    </p>
+                    <p className="text-xs text-slate-500">{loc.address}</p>
+                  </div>
+                  <a
+                    href={`tel:${loc.phone}`}
+                    className="flex items-center gap-1.5 rounded-md bg-blue-100 px-3 py-1.5 text-xs font-bold text-blue-700 hover:bg-blue-200 dark:bg-blue-900/40 dark:text-blue-300"
+                  >
+                    <Phone size={12} /> Call
+                  </a>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <Button
+                variant="light"
+                color="default"
+                onPress={() => setShowOutHoursModal(false)}
+              >
+                Change Time
+              </Button>
+              <Button
+                color="primary"
+                onPress={() => setShowOutHoursModal(false)}
+              >
+                Understood
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
 
   if (submitSuccess) {
     return (
@@ -236,6 +308,7 @@ export default function BookRepairPage() {
 
   return (
     <section className="min-h-screen w-full bg-slate-50 px-4 pt-24 pb-12 dark:bg-black">
+      <OutHoursModal />
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 text-center">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white md:text-3xl">
@@ -328,7 +401,7 @@ export default function BookRepairPage() {
                 <Textarea
                   label="Describe the Issue"
                   placeholder="Screen cracked, not charging, etc."
-                  minRows={2}
+                  minRows={3}
                   variant="bordered"
                   {...formik.getFieldProps("issueDescription")}
                   isInvalid={
@@ -340,52 +413,6 @@ export default function BookRepairPage() {
                     formik.errors.issueDescription
                   }
                 />
-
-                {/* Compact Image Upload */}
-                <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-zinc-700 dark:bg-zinc-800/50">
-                  <div className="flex items-center justify-between">
-                    <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300 hover:text-blue-500">
-                      <Upload size={16} />
-                      <span>Upload Photos (Max 3)</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        disabled={formik.values.images.length >= 3}
-                      />
-                    </label>
-                    <span className="text-[10px] text-slate-400">
-                      {formik.values.images.length}/3
-                    </span>
-                  </div>
-
-                  {/* Horizontal Preview Strip */}
-                  {formik.values.images.length > 0 && (
-                    <div className="mt-3 flex gap-2 overflow-x-auto">
-                      {formik.values.images.map((img: string, idx: number) => (
-                        <div
-                          key={idx}
-                          className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-md border border-slate-200"
-                        >
-                          <img
-                            src={img}
-                            alt="preview"
-                            className="h-full w-full object-cover"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeImage(idx)}
-                            className="absolute right-0 top-0 bg-red-500/80 p-0.5 text-white hover:bg-red-600"
-                          >
-                            <X size={10} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           </div>
@@ -451,19 +478,28 @@ export default function BookRepairPage() {
                   </div>
                   <div>
                     <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                      Time (8am-8pm)
+                      Time
                     </label>
                     <input
                       type="time"
-                      min="08:00"
-                      max="20:00"
-                      {...formik.getFieldProps("time")}
+                      value={formik.values.time}
+                      onChange={handleTimeChange}
+                      onBlur={formik.handleBlur}
+                      name="time"
                       className="w-full rounded-lg border border-slate-200 bg-transparent px-2 py-2 text-sm focus:border-blue-500 focus:outline-none dark:border-zinc-700 dark:text-white"
                     />
                   </div>
                 </div>
-                {(formik.errors.date || formik.errors.time) && (
-                  <p className="text-xs text-red-500">Invalid Date or Time</p>
+
+                {/* FIX: Only show time error if touched AND error exists */}
+                {((formik.touched.date && formik.errors.date) ||
+                  (formik.touched.time && formik.errors.time)) && (
+                  <div className="flex items-start gap-2 text-xs text-red-500 mt-2">
+                    <AlertCircle size={14} className="mt-0.5" />
+                    <span>
+                      Please select a date and valid time (11am - 8pm).
+                    </span>
+                  </div>
                 )}
               </div>
 
