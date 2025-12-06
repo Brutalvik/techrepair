@@ -45,14 +45,15 @@ export const ContactSection = () => {
     {
       id: "elveden",
       name: "Downtown (Elveden Centre)",
-      address: "707 7 Ave SW Main Floor, Calgary, AB T2P 3H6",
+      // UPDATED ADDRESS HERE
+      address: "707 6 St SW Main Floor, Calgary, AB T2P 3H6",
       landmark: "Beside Good Earth Coffee",
       // Real Google Maps link for the button
       mapLink:
-        "https://www.google.com/maps/place/707+7+Ave+SW,+Calgary,+AB+T2P+3H6",
+        "https://www.google.com/maps/search/?api=1&query=707+6+St+SW+Calgary",
       // Embed URL specific to this address
       embedUrl:
-        "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2508.087548653466!2d-114.07753902328512!3d51.0481209717132!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x53716fefcb41c729%3A0x8629454268852884!2s707%207%20Ave%20SW%2C%20Calgary%2C%20AB%20T2P%203H6!5e0!3m2!1sen!2sca!4v1700000000000!5m2!1sen!2sca",
+        "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2508.457368297779!2d-114.0766636!3d51.0445634!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x53716fe76e279317%3A0x762309730595d2!2s707%206%20St%20SW%2C%20Calgary%2C%20AB%20T2P%203H6!5e0!3m2!1sen!2sca!4v1700000000000!5m2!1sen!2sca",
     },
     {
       id: "kensington",
@@ -61,10 +62,10 @@ export const ContactSection = () => {
       landmark: "Unit #101",
       // Real Google Maps link for the button
       mapLink:
-        "https://www.google.com/maps/place/1211+Kensington+Rd+NW+%23101,+Calgary,+AB+T2N+3P6",
+        "https://www.google.com/maps/search/?api=1&query=1211+Kensington+Rd+NW+Calgary",
       // Embed URL specific to this address
       embedUrl:
-        "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2507.546087964949!2d-114.09012992328468!3d51.05842467171487!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x53716f858258930f%3A0x7707963428620751!2s1211%20Kensington%20Rd%20NW%20%23101%2C%20Calgary%2C%20AB%20T2N%203P6!5e0!3m2!1sen!2sca!4v1700000000000!5m2!1sen!2sca",
+        "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2507.864357771746!2d-114.0903!3d51.0528!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x53716f9268a69e25%3A0x4c0b646666666666!2s1211%20Kensington%20Rd%20NW%20%23101%2C%20Calgary%2C%20AB%20T2N%203P6!5e0!3m2!1sen!2sca!4v1700000000000!5m2!1sen!2sca",
     },
   ];
 
