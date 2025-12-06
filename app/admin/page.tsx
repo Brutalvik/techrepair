@@ -21,6 +21,7 @@ import {
   LayoutList,
   ChevronLeft,
   ChevronRight,
+  FileText,
 } from "lucide-react";
 import { Button } from "@heroui/button";
 import { Input } from "@heroui/input";
@@ -35,18 +36,19 @@ import {
 import clsx from "clsx";
 import { API_BASE_URL } from "@/config/api-config";
 
-// Type definition
+// --- TYPE DEFINITION ---
 type Booking = {
   id: number;
   tracking_id: string;
   customer_name: string;
   device_type: string;
+  issue_description: string;
   email: string;
   status: string;
   created_at: string;
   booking_time: string;
   updated_at: string;
-  archived_at?: string | null; // Can be null for active items
+  archived_at?: string | null;
 };
 
 type APIResponse = {
@@ -75,12 +77,10 @@ export default function AdminDashboard() {
   const { data: session, status: authStatus } = useSession();
   const { isOpen, onOpen, onOpenChange, onClose } = useDisclosure();
 
-  // --- PAGINATION STATE ---
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [totalCount, setTotalCount] = useState(0);
-  const [limit, setLimit] = useState(20); // Default limit is 20, matching backend
+  const [limit, setLimit] = useState(20);
   const [currentPage, setCurrentPage] = useState(1);
-  // --- END PAGINATION STATE ---
 
   const [loadingData, setLoadingData] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
@@ -93,14 +93,12 @@ export default function AdminDashboard() {
     direction: "desc",
   });
 
-  // Calculate total pages and pagination display info
   const totalPages = Math.ceil(totalCount / limit);
   const startRange = totalCount === 0 ? 0 : (currentPage - 1) * limit + 1;
   const endRange = Math.min(currentPage * limit, totalCount);
   const isFirstPage = currentPage === 1;
   const isLastPage = currentPage === totalPages || totalCount === 0;
 
-  // 1. Fetch Bookings Logic
   const fetchBookings = useCallback(
     async (query: string, page: number, recLimit: number) => {
       setLoadingData(true);
@@ -110,12 +108,10 @@ export default function AdminDashboard() {
         let url = "";
 
         if (query) {
-          // GLOBAL SEARCH: Hitting the main endpoint for search
           url = `${API_BASE_URL}/api/admin/bookings?q=${encodeURIComponent(
             query
           )}&limit=${recLimit}&offset=${offset}`;
         } else {
-          // NO SEARCH: Use tabs to decide endpoint
           url =
             viewMode === "active"
               ? `${API_BASE_URL}/api/admin/bookings?limit=${recLimit}&offset=${offset}`
@@ -127,8 +123,6 @@ export default function AdminDashboard() {
           const data: APIResponse = await res.json();
           setBookings(data.data);
           setTotalCount(data.total);
-          // Set currentPage to ensure it's in sync, especially when limit changes
-          // Note: data.limit and data.offset reflect the *actual* parameters used by the server
         } else {
           console.error("API call failed:", res.status, await res.text());
         }
@@ -143,25 +137,19 @@ export default function AdminDashboard() {
     [viewMode]
   );
 
-  // Effect to trigger fetch on initial load, viewMode change, or limit change
   useEffect(() => {
     if (authStatus === "authenticated") {
-      // Always reset to page 1 when view mode or limit changes
       setCurrentPage(1);
-      // Fetch data for the new context (page 1)
       fetchBookings(searchQuery, 1, limit);
     }
   }, [authStatus, viewMode, limit]);
 
-  // Effect to re-fetch when page changes (only after initial load/context change)
   useEffect(() => {
-    // This prevents double fetching on mount/context change since the above useEffect handles page 1
     if (authStatus === "authenticated") {
       fetchBookings(searchQuery, currentPage, limit);
     }
   }, [currentPage]);
 
-  // --- PAGINATION HANDLERS ---
   const handlePageChange = (newPage: number) => {
     if (newPage > 0 && newPage <= totalPages) {
       setCurrentPage(newPage);
@@ -169,31 +157,26 @@ export default function AdminDashboard() {
   };
 
   const handleLimitChange = (newLimit: number) => {
-    // Reset to page 1 when limit changes
     setLimit(newLimit);
     setCurrentPage(1);
-    // Fetch is handled by useEffect[limit]
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setCurrentPage(1); // Always reset to page 1 for a new search
+    setCurrentPage(1);
     fetchBookings(searchQuery, 1, limit);
   };
 
   const clearSearch = () => {
     setSearchQuery("");
-    setCurrentPage(1); // Reset page on clear
-    fetchBookings("", 1, limit); // Fetch for current viewMode, page 1, new limit
+    setCurrentPage(1);
+    fetchBookings("", 1, limit);
   };
 
   const handleRefresh = () => {
-    // Re-fetch data for the current search, page, and limit
     fetchBookings(searchQuery, currentPage, limit);
   };
-  // --- END PAGINATION HANDLERS ---
 
-  // Helper: Determine if a row is archived based on DATA, not just viewMode
   const isArchived = (booking: Booking) => {
     return !!booking.archived_at;
   };
@@ -211,14 +194,10 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(
         `${API_BASE_URL}/api/admin/bookings/${bookingToArchive}/archive`,
-        {
-          method: "POST",
-        }
+        { method: "POST" }
       );
 
       if (res.ok) {
-        // Re-fetch data after archiving to update list, count, and handle potential page shift
-        // Use the current search query and page, but let the fetch function handle the new count.
         fetchBookings(searchQuery, currentPage, limit);
       } else {
         alert("Failed to archive");
@@ -331,7 +310,6 @@ export default function AdminDashboard() {
     );
 
   if (authStatus === "unauthenticated") {
-    // ... (Unauthenticated content remains the same)
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 px-4 dark:bg-black">
         <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-xl dark:bg-zinc-900">
@@ -398,7 +376,6 @@ export default function AdminDashboard() {
 
         {/* CONTROLS ROW */}
         <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          {/* TABS */}
           <div className="grid grid-cols-2 lg:flex lg:w-auto rounded-lg bg-white p-1 shadow-sm dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">
             <button
               onClick={() => setViewMode("active")}
@@ -426,7 +403,6 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          {/* SEARCH & REFRESH */}
           <div className="flex flex-col gap-2 sm:flex-row lg:items-center">
             <form onSubmit={handleSearch} className="relative w-full lg:w-80">
               <Input
@@ -476,9 +452,8 @@ export default function AdminDashboard() {
           </div>
         ) : (
           <>
-            {/* DESKTOP VIEW - Table remains the same */}
+            {/* DESKTOP VIEW - TABLE */}
             <div className="hidden md:block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-              {/* ... Table structure (thead, tbody) remains the same, using sortedBookings ... */}
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                   <thead className="bg-slate-50 text-slate-500 dark:bg-zinc-800/50 dark:text-slate-400">
@@ -487,6 +462,7 @@ export default function AdminDashboard() {
                         { label: "ID", key: "tracking_id" },
                         { label: "Customer", key: "customer_name" },
                         { label: "Device", key: "device_type" },
+                        { label: "Issue", key: "issue_description" },
                         { label: "Booked", key: "booking_time" },
                         {
                           label:
@@ -545,6 +521,14 @@ export default function AdminDashboard() {
                         <td className="px-6 py-4 text-slate-600 dark:text-slate-300">
                           {booking.device_type}
                         </td>
+
+                        {/* --- ISSUE COLUMN FIXED: Wraps text normally --- */}
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-slate-600 dark:text-slate-400 whitespace-normal min-w-[200px]">
+                            {booking.issue_description || "N/A"}
+                          </div>
+                        </td>
+
                         <td className="px-6 py-4">
                           <div className="text-slate-700 dark:text-slate-300">
                             {formatTimeSlot(booking.booking_time)}
@@ -554,7 +538,6 @@ export default function AdminDashboard() {
                           </div>
                         </td>
 
-                        {/* Dynamic Timestamp: Show Archive date if archived, otherwise Updated date */}
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2 text-slate-500">
                             {isArchived(booking) ? (
@@ -655,7 +638,7 @@ export default function AdminDashboard() {
               </div>
             </div>
 
-            {/* MOBILE VIEW - Cards remain the same */}
+            {/* MOBILE VIEW - CARDS */}
             <div className="md:hidden space-y-3">
               {sortedBookings.map((booking) => (
                 <div
@@ -719,6 +702,19 @@ export default function AdminDashboard() {
                         )}
                       </p>
                     </div>
+                  </div>
+
+                  {/* --- ISSUE SECTION (MOBILE) FIXED: Shows full text --- */}
+                  <div className="mb-4 rounded-lg bg-slate-50 p-3 dark:bg-zinc-800/50 border border-slate-100 dark:border-zinc-800">
+                    <div className="flex items-center gap-2 mb-1">
+                      <FileText size={12} className="text-slate-400" />
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                        Issue Reported
+                      </p>
+                    </div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">
+                      {booking.issue_description || "No description provided."}
+                    </p>
                   </div>
 
                   {/* Actions Section */}
@@ -787,10 +783,9 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* --- PAGINATION CONTROLS (NEW SECTION) --- */}
+            {/* PAGINATION CONTROLS */}
             {totalCount > 0 && (
               <div className="mt-8 flex flex-col items-center justify-between gap-4 border-t border-slate-200 pt-4 dark:border-zinc-800 sm:flex-row">
-                {/* 1. Status Text & Limit Dropdown */}
                 <div className="flex items-center gap-4 text-sm text-slate-700 dark:text-slate-400">
                   <span>
                     Showing{" "}
@@ -821,9 +816,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* 2. Page Navigation Controls */}
                 <div className="flex items-center gap-2">
-                  {/* Page Selector Dropdown */}
                   {totalPages > 1 && (
                     <div className="flex items-center gap-1.5 text-sm">
                       <span className="text-slate-700 dark:text-slate-400">
@@ -851,7 +844,6 @@ export default function AdminDashboard() {
                     </div>
                   )}
 
-                  {/* Previous Button */}
                   <Button
                     onPress={() => handlePageChange(currentPage - 1)}
                     disabled={isFirstPage || loadingData}
@@ -863,7 +855,6 @@ export default function AdminDashboard() {
                     Prev
                   </Button>
 
-                  {/* Next Button */}
                   <Button
                     onPress={() => handlePageChange(currentPage + 1)}
                     disabled={isLastPage || loadingData}
@@ -877,7 +868,6 @@ export default function AdminDashboard() {
                 </div>
               </div>
             )}
-            {/* --- END PAGINATION CONTROLS --- */}
           </>
         )}
       </div>
